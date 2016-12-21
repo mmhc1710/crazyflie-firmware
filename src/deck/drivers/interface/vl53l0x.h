@@ -329,5 +329,6 @@ uint16_t vl53l0xReadRangeSingleMillimeters(void);
 void VL6180x_setRegister(uint16_t registerAddr, uint8_t data);
 uint8_t VL6180x_getRegister(uint16_t registerAddr);
 float VL6180xGetAmbientLight(vl6180x_als_gain VL6180X_ALS_GAIN);
+uint8_t VL6180xGetDistance();
 
 #endif /* _VL53L0X_H_ */

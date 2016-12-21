@@ -46,7 +46,7 @@ static uint16_t io_timeout = 0;
 static bool did_timeout;
 static uint16_t timeout_start_ms;
 
-static uint16_t range_last = 0;
+static uint8_t range_last = 0;
 static float light_last = 0.0;
 
 // Record the current time to check an upcoming timeout against
@@ -165,13 +165,16 @@ void vl53l0xTask(void* arg)
   while (1) {
     xLastWakeTime = xTaskGetTickCount();
     light_last = VL6180xGetAmbientLight(GAIN_1);
-    range_last = 1;//vl53l0xReadRangeContinuousMillimeters();
+    DEBUG_PRINT("light_last = %f\n", (double) light_last);
+    range_last = VL6180xGetDistance();//vl53l0xReadRangeContinuousMillimeters();
+    DEBUG_PRINT("range_last = %d\n", range_last);
     vTaskDelayUntil(&xLastWakeTime, M2T(500));
   }
 }
 
 float VL6180xGetAmbientLight(vl6180x_als_gain VL6180X_ALS_GAIN)
 {
+	DEBUG_PRINT("VL6180xGetAmbientLight...\n");
   //First load in Gain we are using, do it everytime incase someone changes it on us.
   //Note: Upper nibble shoudl be set to 0x4 i.e. for ALS gain of 1.0 write 0x46
   VL6180x_setRegister(VL6180X_SYSALS_ANALOGUE_GAIN, (0x40 | VL6180X_ALS_GAIN)); // Set the ALS gain
@@ -211,6 +214,16 @@ float VL6180xGetAmbientLight(vl6180x_als_gain VL6180X_ALS_GAIN)
   float alsCalculated = (float)0.32 * ((float)alsRaw / alsGain) * alsIntegrationPeriod;
 
   return alsCalculated;
+}
+
+uint8_t VL6180xGetDistance()
+{
+	DEBUG_PRINT("VL6180xGetDistance...\n");
+  VL6180x_setRegister(VL6180X_SYSRANGE_START, 0x01); //Start Single shot mode
+  delay(10);
+  return VL6180x_getRegister(VL6180X_RESULT_RANGE_VAL);
+  VL6180x_setRegister(VL6180X_SYSTEM_INTERRUPT_CLEAR, 0x07);
+  //	return distance;
 }
 
 static void delay(uint32_t cycles)
@@ -671,14 +684,14 @@ bool vl53l0xInitSensor(bool io_2v8)
 // seems to increase the likelihood of getting an inaccurate reading because of
 // unwanted reflections from objects other than the intended target.
 // Defaults to 0.25 MCPS as initialized by the ST API and this library.
-bool vl53l0xSetSignalRateLimit(float limit_Mcps)
-{
-  if (limit_Mcps < 0 || limit_Mcps > 511.99) { return false; }
-
-  // Q9.7 fixed point format (9 integer bits, 7 fractional bits)
-  uint16_t fixed_pt = limit_Mcps * (1 << 7);
-  return VL6180x_setRegister16bit(VL53L0X_RA_FINAL_RANGE_CONFIG_MIN_COUNT_RATE_RTN_LIMIT, fixed_pt);
-}
+//bool vl53l0xSetSignalRateLimit(float limit_Mcps)
+//{
+//  if (limit_Mcps < 0 || limit_Mcps > 511.99) { return false; }
+//
+//  // Q9.7 fixed point format (9 integer bits, 7 fractional bits)
+//  uint16_t fixed_pt = limit_Mcps * (1 << 7);
+//  return VL6180x_setRegister16bit(VL53L0X_RA_FINAL_RANGE_CONFIG_MIN_COUNT_RATE_RTN_LIMIT, fixed_pt);
+//}
 
 // Set the measurement timing budget in microseconds, which is the time allowed
 // for one measurement; the ST API and this library take care of splitting the
@@ -1381,7 +1394,7 @@ static const DeckDriver vl53l0x_deck = {
 DECK_DRIVER(vl53l0x_deck);
 
 LOG_GROUP_START(range)
-LOG_ADD(LOG_FLOAT, light, &light_last)
-LOG_ADD(LOG_UINT16, range, &range_last)
+//LOG_ADD(LOG_FLOAT, light, &light_last)
+LOG_ADD(LOG_UINT8, range, &range_last)
 LOG_GROUP_STOP(range)
 
