@@ -47,7 +47,7 @@ static bool did_timeout;
 static uint16_t timeout_start_ms;
 
 static uint8_t range_last = 0;
-static float light_last = 0.0;
+//static float light_last = 0.0;
 
 // Record the current time to check an upcoming timeout against
 #define startTimeout() (timeout_start_ms = xTaskGetTickCount())
@@ -164,8 +164,8 @@ void vl53l0xTask(void* arg)
 //  vl53l0xStartContinuous(0);
   while (1) {
     xLastWakeTime = xTaskGetTickCount();
-    light_last = VL6180xGetAmbientLight(GAIN_1);
-    DEBUG_PRINT("light_last = %f\n", (double) light_last);
+    //light_last = VL6180xGetAmbientLight(GAIN_1);
+    //DEBUG_PRINT("light_last = %d.%.2d\n", (int)light_last, (int)((light_last-(int)light_last)*100));
     range_last = VL6180xGetDistance();//vl53l0xReadRangeContinuousMillimeters();
     DEBUG_PRINT("range_last = %d\n", range_last);
     vTaskDelayUntil(&xLastWakeTime, M2T(500));
