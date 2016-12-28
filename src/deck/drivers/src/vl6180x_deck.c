@@ -36,7 +36,7 @@
 
 #include "i2cdev.h"
 
-#include "vl6180x.h"
+#include "../interface/vl6180x_deck.h"
 
 static uint8_t devAddr;
 static I2C_Dev *I2Cx;

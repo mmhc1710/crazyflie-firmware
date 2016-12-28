@@ -41,6 +41,8 @@
 #include "controller.h"
 #include "power_distribution.h"
 
+#include "vl6180x.h"
+
 #ifdef ESTIMATOR_TYPE_kalman
 #include "estimator_kalman.h"
 #else
@@ -54,6 +56,7 @@ static setpoint_t setpoint;
 static sensorData_t sensorData;
 static state_t state;
 static control_t control;
+static uint8_t range_last = 0;
 
 static void stabilizerTask(void* param);
 
@@ -66,6 +69,11 @@ void stabilizerInit(void)
   stateEstimatorInit();
   stateControllerInit();
   powerDistributionInit();
+
+#if defined(VL6180X_ENABLED)
+  vl6180xInit();
+#endif
+
 #if defined(SITAW_ENABLED)
   sitAwInit();
 #endif
@@ -84,6 +92,9 @@ bool stabilizerTest(void)
   pass &= stateEstimatorTest();
   pass &= stateControllerTest();
   pass &= powerDistributionTest();
+#if defined(VL6180X_ENABLED)
+  pass &= vl6180xTest();
+#endif
 
   return pass;
 }
@@ -116,6 +127,9 @@ static void stabilizerTask(void* param)
     stateEstimatorUpdate(&state, &sensorData, &control);
 #else
     sensorsAcquire(&sensorData, tick);
+#if defined(VL6180X_ENABLED)
+    range_last = VL6180xGetDistance();
+#endif
     stateEstimator(&state, &sensorData, tick);
 #endif
 
@@ -170,3 +184,10 @@ LOG_GROUP_STOP(mag)
 LOG_GROUP_START(controller)
 LOG_ADD(LOG_INT16, ctr_yaw, &control.yaw)
 LOG_GROUP_STOP(controller)
+
+#if defined(VL6180X_ENABLED)
+LOG_GROUP_START(range)
+//LOG_ADD(LOG_FLOAT, light, &light_last)
+LOG_ADD(LOG_UINT8, range, &range_last)
+LOG_GROUP_STOP(range)
+#endif

@@ -24,8 +24,8 @@
  * vl6180x.h: Time-of-flight distance sensor driver
  */
 
-#ifndef _VL6180X_H_
-#define _VL6180X_H_
+#ifndef _VL6180X_DECK_H_
+#define _VL6180X_DECK_H_
 
 #define VL6180X_DEFAULT_ADDRESS 0b0101001
 
@@ -146,4 +146,4 @@ static uint8_t VL6180x_getRegister(uint16_t registerAddr);
 //static float VL6180xGetAmbientLight(vl6180x_als_gain VL6180X_ALS_GAIN);
 static uint8_t VL6180xGetDistance();
 
-#endif /* _VL6180X_H_ */
+#endif /* _VL6180X_DECK_H_ */
