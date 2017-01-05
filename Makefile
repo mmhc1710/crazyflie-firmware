@@ -164,7 +164,7 @@ PROJ_OBJ += system.o comm.o console.o pid.o crtpservice.o param.o mem.o
 PROJ_OBJ += log.o worker.o trigger.o sitaw.o queuemonitor.o
 PROJ_OBJ_CF1 += sound_cf1.o sensors_cf1.o
 PROJ_OBJ_CF2 += platformservice.o sound_cf2.o extrx.o sysload.o
-PROJ_OBJ_CF2 += vl6180x.o
+#PROJ_OBJ_CF2 += vl6180x.o
 
 # Stabilizer modules
 PROJ_OBJ += commander.o ext_position.o
@@ -191,7 +191,7 @@ PROJ_OBJ_CF2 += buzzdeck.o
 PROJ_OBJ_CF2 += gtgps.o
 PROJ_OBJ_CF2 += cppmdeck.o
 PROJ_OBJ_CF2 += usddeck.o
-#PROJ_OBJ_CF2 += vl6180x_deck.o
+PROJ_OBJ_CF2 += vl6180x_deck.o
 PROJ_OBJ_CF2 += hello.o
 PROJ_OBJ_CF2 += locodeck.o
 ifeq ($(LPS_TDMA_ENABLE), 1)

@@ -24,21 +24,19 @@
  * vl6180x.c: Time-of-flight distance sensor driver
  */
 
-#define DEBUG_MODULE "VLX"
+#include "../interface/vl6180x_bak.h"
 
 #include "FreeRTOS.h"
 #include "task.h"
 
-#include "deck.h"
 #include "system.h"
 #include "debug.h"
 #include "log.h"
 
 #include "i2cdev.h"
 
-#include "stabilizer_types.h"
-#include "../interface/vl6180x_deck.h"
 
+#define DEBUG_MODULE "VLX"
 #define VL6180X_DEFAULT_ADDRESS 0b0101001
 
 #define VL6180x_FAILURE_RESET   false
@@ -129,40 +127,11 @@ GAIN_40,     // Actual ALS Gain of 40
 
 } vl6180x_als_gain;
 
-
-/** Default constructor, uses external I2C address.
- * @see VL6180X_DEFAULT_ADDRESS
- */
-void vl6180xInit(DeckInfo* info);
-
-bool vl6180xTest(void);
-void vl6180xTask(void* arg);
-
-/** Verify the I2C connection.
- * Make sure the device is connected and responds as expected.
- * @return True if connection is valid, false otherwise
- */
-bool vl6180xTestConnection();
-
-// Get Model ID.
-void VL6180xGetIdentification(VL6180xIdentification *temp);
-void VL6180xPrintIdentification(VL6180xIdentification *temp);
-
-
-// Initialize sensor
-bool vl6180xInitSensor();
-
-//void VL6180x_setRegister(uint16_t registerAddr, uint16_t data);
-static bool VL6180x_setRegister(uint16_t registerAddr, uint8_t data);
-static uint8_t VL6180x_getRegister(uint16_t registerAddr);
-//static float VL6180xGetAmbientLight(vl6180x_als_gain VL6180X_ALS_GAIN);
-static uint8_t VL6180xGetDistance();
-
 static uint8_t devAddr;
 static I2C_Dev *I2Cx;
 static bool isInit;
 
-static uint8_t range_last = 0;
+//static uint8_t range_last = 0;
 //static float light_last = 0.0;
 
 // Record the current time to check an upcoming timeout against
@@ -189,12 +158,30 @@ static uint16_t VL6180x_getRegister16bit(uint8_t reg);
 static bool VL6180x_setRegister16bit(uint8_t reg, uint16_t val);
 //static bool VL6180x_setRegister32bit(uint8_t reg, uint32_t val);
 
+/** Verify the I2C connection.
+ * Make sure the device is connected and responds as expected.
+ * @return True if connection is valid, false otherwise
+ */
+bool vl6180xTestConnection();
+
+// Get Model ID.
+void VL6180xGetIdentification(VL6180xIdentification *temp);
+void VL6180xPrintIdentification(VL6180xIdentification *temp);
+
+
+// Initialize sensor
+bool vl6180xInitSensor();
+
+//void VL6180x_setRegister(uint16_t registerAddr, uint16_t data);
+static bool VL6180x_setRegister(uint16_t registerAddr, uint8_t data);
+static uint8_t VL6180x_getRegister(uint16_t registerAddr);
+
 static void delay(uint32_t cycles);
 
 /** Default constructor, uses default I2C address.
  * @see VL6180X_DEFAULT_ADDRESS
  */
-void vl6180xInit(DeckInfo* info)
+void vl6180xInit(void)
 {
   if (isInit)
     return;
@@ -203,7 +190,7 @@ void vl6180xInit(DeckInfo* info)
   I2Cx = I2C1_DEV;
   devAddr = VL6180X_DEFAULT_ADDRESS;
 
-//  xTaskCreate(vl6180xTask, "vl6180x", 2*configMINIMAL_STACK_SIZE, NULL, 3, NULL);
+  //xTaskCreate(vl6180xTask, "vl6180x", 2*configMINIMAL_STACK_SIZE, NULL, 3, NULL);
 
   isInit = true;
 }
@@ -225,36 +212,36 @@ bool vl6180xTest(void)
   return testStatus;
 }
 
-void vl6180xTask(void* arg)
-{
-  systemWaitStart();
-  TickType_t xLastWakeTime;
-
-  while (1) {
-    xLastWakeTime = xTaskGetTickCount();
-    //light_last = VL6180xGetAmbientLight(GAIN_1);
-    //DEBUG_PRINT("light_last = %d.%.2d\n", (int)light_last, (int)((light_last-(int)light_last)*100));
-    range_last = VL6180xGetDistance();//vl53l0xReadRangeContinuousMillimeters();
-    DEBUG_PRINT("range_last = %d\n", range_last);
-
-//#if defined(ESTIMATOR_TYPE_kalman) && defined(UPDATE_KALMAN_WITH_RANGING)
-//    // check if range is feasible and push into the kalman filter
-//    // the sensor should not be able to measure >3 [m], and outliers typically
-//    // occur as >8 [m] measurements
-//    if (range_last < RANGE_OUTLIER_LIMIT){
+//void vl6180xTask(void* arg)
+//{
+//  systemWaitStart();
+//  TickType_t xLastWakeTime;
 //
-//      // Form measurement
-//      tofMeasurement_t tofData;
-//      tofData.timestamp = xTaskGetTickCount();
-//      tofData.distance = (float)range_last * 0.001f; // Scale from [mm] to [m]
-//      tofData.stdDev = expStdA * (1.0f  + expf( expCoeff * ( tofData.distance - expPointA)));
-//      stateEstimatorEnqueueTOF(&tofData);
-//    }
-//#endif
-
-    vTaskDelayUntil(&xLastWakeTime, F2T(10));
-  }
-}
+//  while (1) {
+//    xLastWakeTime = xTaskGetTickCount();
+//    //light_last = VL6180xGetAmbientLight(GAIN_1);
+//    //DEBUG_PRINT("light_last = %d.%.2d\n", (int)light_last, (int)((light_last-(int)light_last)*100));
+//    range_last = VL6180xGetDistance();//vl53l0xReadRangeContinuousMillimeters();
+//    DEBUG_PRINT("range_last = %d\n", range_last);
+//
+////#if defined(ESTIMATOR_TYPE_kalman) && defined(UPDATE_KALMAN_WITH_RANGING)
+////    // check if range is feasible and push into the kalman filter
+////    // the sensor should not be able to measure >3 [m], and outliers typically
+////    // occur as >8 [m] measurements
+////    if (range_last < RANGE_OUTLIER_LIMIT){
+////
+////      // Form measurement
+////      tofMeasurement_t tofData;
+////      tofData.timestamp = xTaskGetTickCount();
+////      tofData.distance = (float)range_last * 0.001f; // Scale from [mm] to [m]
+////      tofData.stdDev = expStdA * (1.0f  + expf( expCoeff * ( tofData.distance - expPointA)));
+////      stateEstimatorEnqueueTOF(&tofData);
+////    }
+////#endif
+//
+//    vTaskDelayUntil(&xLastWakeTime, M2T(100));
+//  }
+//}
 
 //float VL6180xGetAmbientLight(vl6180x_als_gain VL6180X_ALS_GAIN)
 //{
@@ -300,27 +287,19 @@ void vl6180xTask(void* arg)
 //  return alsCalculated;
 //}
 
-uint8_t VL6180xGetDistance()
+uint8_t VL6180xGetDistance(void)
 {
-//  DEBUG_PRINT("VL6180xGetDistance...\n");
+	static uint8_t distance;
+  //DEBUG_PRINT("VL6180xGetDistance...\n");
   VL6180x_setRegister(VL6180X_SYSRANGE_START, 0x01); //Start Single shot mode
   delay(10);
-  return VL6180x_getRegister(VL6180X_RESULT_RANGE_VAL);
+  distance = VL6180x_getRegister(VL6180X_RESULT_RANGE_VAL);
+  DEBUG_PRINT("Distance= %d\n", distance);
+  return distance;
+//  return VL6180x_getRegister(VL6180X_RESULT_RANGE_VAL);
   VL6180x_setRegister(VL6180X_SYSTEM_INTERRUPT_CLEAR, 0x07);
   //	return distance;
 }
-
-//TickType_t xLastWakeTime;
-void proximityVL6180xFreeRunningRanging(const uint32_t tick)
-{
-	if (RATE_DO_EXECUTE(10, tick)) {
-//	xLastWakeTime = xTaskGetTickCount();
-	range_last = VL6180xGetDistance();
-//	DEBUG_PRINT("range_last = %d\n", range_last);
-//	vTaskDelayUntil(&xLastWakeTime, M2T(100));
-	}
-}
-
 
 static void delay(uint32_t cycles)
 {
@@ -340,7 +319,7 @@ static void delay(uint32_t cycles)
 VL6180xIdentification identification;
 
 //VL6180xIdentification identification;
-bool vl6180xTestConnection()
+bool vl6180xTestConnection(void)
 {
   bool ret = true;
   DEBUG_PRINT("Testing connection...\n");
@@ -375,7 +354,7 @@ void VL6180xPrintIdentification(VL6180xIdentification *temp){
 }
 
 // Initialize sensor
-bool vl6180xInitSensor()
+bool vl6180xInitSensor(void)
 {
 	  uint8_t data; //for temp data storage
 
@@ -536,22 +515,4 @@ uint8_t VL6180x_getRegister(uint16_t registerAddr)
 	i2cdevRead16(I2Cx, devAddr, registerAddr, 1, &data); //I2Cx and devAddr set during init.
 	return data;
 }
-
-// TODO: Decide on vid:pid and set the used pins
-static const DeckDriver vl6180x_deck = {
-  .vid = 0,
-  .pid = 0,
-  .name = "vl6180x_deck",
-  .usedGpio = 0,
-
-  .init = vl6180xInit,
-  .test = vl6180xTest,
-};
-
-DECK_DRIVER(vl6180x_deck);
-
-LOG_GROUP_START(range)
-//LOG_ADD(LOG_FLOAT, light, &light_last)
-LOG_ADD(LOG_UINT8, range, &range_last)
-LOG_GROUP_STOP(range)
 

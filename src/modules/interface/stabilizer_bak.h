@@ -7,7 +7,7 @@
  *
  * Crazyflie control firmware
  *
- * Copyright (C) 2012 BitCraze AB
+ * Copyright (C) 2011-2012 Bitcraze AB
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,10 +21,17 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * vl6180x.h: Time-of-flight distance sensor driver
+ * stabilizer.h: Stabilizer orchestrator
  */
+#ifndef STABALIZER_H_
+#define STABALIZER_H_
 
-#ifndef _VL6180X_DECK_H_
-#define _VL6180X_DECK_H_
-void proximityVL6180xFreeRunningRanging(const uint32_t tick);
-#endif /* _VL6180X_DECK_H_ */
+#include <stdbool.h>
+#include <stdint.h>
+
+void stabilizerInit(void);
+
+bool stabilizerTest(void);
+
+
+#endif /* STABALIZER_H_ */
