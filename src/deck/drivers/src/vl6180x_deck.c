@@ -311,14 +311,15 @@ uint8_t VL6180xGetDistance()
 }
 
 //TickType_t xLastWakeTime;
-void proximityVL6180xFreeRunningRanging(const uint32_t tick)
+uint8_t proximityVL6180xFreeRunningRanging(const uint32_t tick)
 {
-	if (RATE_DO_EXECUTE(10, tick)) {
+	if (RATE_DO_EXECUTE(100, tick)) {
 //	xLastWakeTime = xTaskGetTickCount();
 	range_last = VL6180xGetDistance();
 //	DEBUG_PRINT("range_last = %d\n", range_last);
 //	vTaskDelayUntil(&xLastWakeTime, M2T(100));
 	}
+	return range_last;
 }
 
 

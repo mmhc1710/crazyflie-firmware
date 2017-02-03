@@ -409,7 +409,7 @@ void stateEstimatorUpdate(state_t *state, sensorData_t *sensors, control_t *cont
     baroAccumulatorCount++;
   }
 
-  if ((tick-lastBaroUpdate) >= configTICK_RATE_HZ/BARO_RATE // update at BARO_RATE
+  if ((tick-lastBaroUpdate) >= configTICK_RATE_HZ/100 // update at BARO_RATE
       && baroAccumulatorCount > 0)
   {
     baroAccumulator.asl /= baroAccumulatorCount;

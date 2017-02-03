@@ -8,6 +8,8 @@
 
 ## Load a deck driver that has no OW memory
  CFLAGS += -DDECK_FORCE=vl6180x_deck
+ #CFLAGS += -DESTIMATOR_TYPE_kalman
+ #CFLAGS += -DKALMAN_USE_BARO_UPDATE
 
 ## Enable biq quad deck features
 # CFLAGS += -DENABLE_BQ_DECK

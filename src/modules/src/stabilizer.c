@@ -113,13 +113,12 @@ static void stabilizerTask(void* param)
   while(1) {
     vTaskDelayUntil(&lastWakeTime, F2T(RATE_MAIN_LOOP));
 
-    proximityVL6180xFreeRunningRanging(tick);
-
     getExtPosition(&state);
 #ifdef ESTIMATOR_TYPE_kalman
     stateEstimatorUpdate(&state, &sensorData, &control);
 #else
     sensorsAcquire(&sensorData, tick);
+    sensorData.baro.asl = proximityVL6180xFreeRunningRanging(tick);
     stateEstimator(&state, &sensorData, tick);
 #endif
 
