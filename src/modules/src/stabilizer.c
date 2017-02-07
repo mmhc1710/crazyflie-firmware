@@ -118,7 +118,8 @@ static void stabilizerTask(void* param)
     stateEstimatorUpdate(&state, &sensorData, &control);
 #else
     sensorsAcquire(&sensorData, tick);
-    sensorData.baro.asl = proximityVL6180xFreeRunningRanging(tick);
+    sensorData.range.front = proximityVL6180xFreeRunningRanging(FRONT,tick);
+    sensorData.range.back = proximityVL6180xFreeRunningRanging(BACK,tick);
     stateEstimator(&state, &sensorData, tick);
 #endif
 
@@ -157,6 +158,13 @@ LOG_ADD(LOG_FLOAT, asl, &sensorData.baro.asl)
 LOG_ADD(LOG_FLOAT, temp, &sensorData.baro.temperature)
 LOG_ADD(LOG_FLOAT, pressure, &sensorData.baro.pressure)
 LOG_GROUP_STOP(baro)
+
+LOG_GROUP_START(vl6180x)
+LOG_ADD(LOG_FLOAT, front, &sensorData.range.front)
+LOG_ADD(LOG_FLOAT, back, &sensorData.range.back)
+LOG_ADD(LOG_FLOAT, right, &sensorData.range.right)
+LOG_ADD(LOG_FLOAT, left, &sensorData.range.left)
+LOG_GROUP_STOP(vl6180x)
 
 LOG_GROUP_START(gyro)
 LOG_ADD(LOG_FLOAT, x, &sensorData.gyro.x)

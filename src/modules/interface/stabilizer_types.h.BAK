@@ -89,13 +89,6 @@ typedef struct baro_s {
   float asl;
 } baro_t;
 
-typedef struct vl6180x_s {
-  float front;
-  float back;
-  float right;
-  float left;
-} vl6180x_t;
-
 typedef struct positionMeasurement_s {
   union {
     struct {
@@ -127,7 +120,6 @@ typedef struct sensorData_s {
   Axis3f mag;
   baro_t baro;
   point_t position;
-  vl6180x_t range;
 } sensorData_t;
 
 typedef struct state_s {

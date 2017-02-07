@@ -27,7 +27,7 @@
 
 #include <math.h>
 
-#include "../interface/vl6180x_bak.h"
+#include "../interface/vl6180x.h.BAK"
 #include "FreeRTOS.h"
 #include "task.h"
 

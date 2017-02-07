@@ -26,5 +26,7 @@
 
 #ifndef _VL6180X_DECK_H_
 #define _VL6180X_DECK_H_
-uint8_t proximityVL6180xFreeRunningRanging(const uint32_t tick);
+#define FRONT 0
+#define BACK 1
+uint8_t proximityVL6180xFreeRunningRanging(int sel, const uint32_t tick);
 #endif /* _VL6180X_DECK_H_ */

@@ -202,6 +202,7 @@ void vl6180xInit(DeckInfo* info)
   i2cdevInit(I2C1_DEV);
   I2Cx = I2C1_DEV;
   devAddr = VL6180X_DEFAULT_ADDRESS;
+  pinMode(DECK_GPIO_IO1, OUTPUT);
 
 //  xTaskCreate(vl6180xTask, "vl6180x", 2*configMINIMAL_STACK_SIZE, NULL, 3, NULL);
 
@@ -215,13 +216,33 @@ bool vl6180xTest(void)
   if (!isInit)
     return false;
 
+  digitalWrite(DECK_GPIO_IO1, LOW);
   testStatus  = vl6180xTestConnection();
-  DEBUG_PRINT("vl6180xTestConnection done...!\n");
-  DEBUG_PRINT("testStatus = %d\n", testStatus);
+  DEBUG_PRINT("vl6180xTestConnection1 done...!\n");
+  DEBUG_PRINT("testStatus1 = %d\n", testStatus);
   testStatus &= vl6180xInitSensor();
-  DEBUG_PRINT("vl6180xInitSensor done...!\n");
-  DEBUG_PRINT("testStatus = %d\n", testStatus);
+  DEBUG_PRINT("vl6180xInitSensor1 done...!\n");
+  DEBUG_PRINT("testStatus1 = %d\n", testStatus);
+  delay(1000);
 
+  digitalWrite(DECK_GPIO_IO1, HIGH);
+  testStatus  = vl6180xTestConnection();
+  DEBUG_PRINT("vl6180xTestConnection2 done...!\n");
+  DEBUG_PRINT("testStatus2 = %d\n", testStatus);
+  testStatus &= vl6180xInitSensor();
+  DEBUG_PRINT("vl6180xInitSensor2 done...!\n");
+  DEBUG_PRINT("testStatus2 = %d\n", testStatus);
+  digitalWrite(DECK_GPIO_IO1, LOW);
+
+//  digitalWrite(DECK_GPIO_IO1, HIGH);
+//  testStatus  = vl6180xTestConnection();
+//  DEBUG_PRINT("vl6180xTestConnection done...!\n");
+//  DEBUG_PRINT("testStatus = %d\n", testStatus);
+//  testStatus &= vl6180xInitSensor();
+//  DEBUG_PRINT("vl6180xInitSensor done...!\n");
+//  DEBUG_PRINT("testStatus = %d\n", testStatus);
+
+  delay(1000);
   return testStatus;
 }
 
@@ -305,14 +326,29 @@ uint8_t VL6180xGetDistance()
 //  DEBUG_PRINT("VL6180xGetDistance...\n");
   VL6180x_setRegister(VL6180X_SYSRANGE_START, 0x01); //Start Single shot mode
   delay(10);
-  return VL6180x_getRegister(VL6180X_RESULT_RANGE_VAL);
   VL6180x_setRegister(VL6180X_SYSTEM_INTERRUPT_CLEAR, 0x07);
+  return VL6180x_getRegister(VL6180X_RESULT_RANGE_VAL);
   //	return distance;
 }
 
 //TickType_t xLastWakeTime;
-uint8_t proximityVL6180xFreeRunningRanging(const uint32_t tick)
+uint8_t proximityVL6180xFreeRunningRanging(int sel, const uint32_t tick)
 {
+	switch (sel){
+	case 0: digitalWrite(DECK_GPIO_IO1, LOW);
+	if (digitalRead(DECK_GPIO_IO1)!=LOW){
+		DEBUG_PRINT("Pin not low!");
+		return 1;
+	}
+	break;
+	case 1: digitalWrite(DECK_GPIO_IO1, HIGH);
+	if (digitalRead(DECK_GPIO_IO1)!=HIGH){
+		DEBUG_PRINT("Pin not high!");
+		return 1;
+	}
+	break;
+	}
+
 	if (RATE_DO_EXECUTE(100, tick)) {
 //	xLastWakeTime = xTaskGetTickCount();
 	range_last = VL6180xGetDistance();
@@ -385,7 +421,7 @@ bool vl6180xInitSensor()
 	  data = VL6180x_getRegister(VL6180X_SYSTEM_FRESH_OUT_OF_RESET);
 	  //DEBUG_PRINT("vl6180xInitSensor test %d\n", i++);
 	  DEBUG_PRINT("vl6180xInitSensor data = %d\n", data);
-	  //if(data != 1) return VL6180x_FAILURE_RESET;
+	  if(data != 1) return VL6180x_FAILURE_RESET;
 	  ////DEBUG_PRINT("vl6180xInitSensor test %d\n", i++);
 
 	  //Required by datasheet
@@ -543,7 +579,7 @@ static const DeckDriver vl6180x_deck = {
   .vid = 0,
   .pid = 0,
   .name = "vl6180x_deck",
-  .usedGpio = 0,
+  .usedGpio = DECK_GPIO_IO1,
 
   .init = vl6180xInit,
   .test = vl6180xTest,

@@ -24,8 +24,7 @@
  * vl6180x.c: Time-of-flight distance sensor driver
  */
 
-#include "../interface/vl6180x_bak.h"
-
+#include "../interface/vl6180x.h.BAK"
 #include "FreeRTOS.h"
 #include "task.h"
 
