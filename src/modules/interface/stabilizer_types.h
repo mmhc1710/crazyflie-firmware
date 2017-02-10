@@ -90,10 +90,10 @@ typedef struct baro_s {
 } baro_t;
 
 typedef struct vl6180x_s {
-  float front;
-  float back;
-  float right;
-  float left;
+  uint8_t front;
+  uint8_t back;
+  uint8_t right;
+  uint8_t left;
 } vl6180x_t;
 
 typedef struct positionMeasurement_s {

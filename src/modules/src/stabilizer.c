@@ -61,33 +61,33 @@ static void stabilizerTask(void* param);
 
 void stabilizerInit(void)
 {
-  if(isInit)
-    return;
+	if(isInit)
+		return;
 
-  sensorsInit();
-  stateEstimatorInit();
-  stateControllerInit();
-  powerDistributionInit();
+	sensorsInit();
+	stateEstimatorInit();
+	stateControllerInit();
+	powerDistributionInit();
 #if defined(SITAW_ENABLED)
-  sitAwInit();
+	sitAwInit();
 #endif
 
-  xTaskCreate(stabilizerTask, STABILIZER_TASK_NAME,
-              STABILIZER_TASK_STACKSIZE, NULL, STABILIZER_TASK_PRI, NULL);
+	xTaskCreate(stabilizerTask, STABILIZER_TASK_NAME,
+			STABILIZER_TASK_STACKSIZE, NULL, STABILIZER_TASK_PRI, NULL);
 
-  isInit = true;
+	isInit = true;
 }
 
 bool stabilizerTest(void)
 {
-  bool pass = true;
+	bool pass = true;
 
-  pass &= sensorsTest();
-  pass &= stateEstimatorTest();
-  pass &= stateControllerTest();
-  pass &= powerDistributionTest();
+	pass &= sensorsTest();
+	pass &= stateEstimatorTest();
+	pass &= stateControllerTest();
+	pass &= powerDistributionTest();
 
-  return pass;
+	return pass;
 }
 
 /* The stabilizer loop runs at 1kHz (stock) or 500Hz (kalman). It is the
@@ -97,41 +97,46 @@ bool stabilizerTest(void)
 
 static void stabilizerTask(void* param)
 {
-  uint32_t tick = 0;
-  uint32_t lastWakeTime;
-  vTaskSetApplicationTaskTag(0, (void*)TASK_STABILIZER_ID_NBR);
+	uint32_t tick = 0;
+	uint32_t lastWakeTime;
+	vTaskSetApplicationTaskTag(0, (void*)TASK_STABILIZER_ID_NBR);
 
-  //Wait for the system to be fully started to start stabilization loop
-  systemWaitStart();
+	//Wait for the system to be fully started to start stabilization loop
+	systemWaitStart();
 
-  // Wait for sensors to be calibrated
-  lastWakeTime = xTaskGetTickCount ();
-  while(!sensorsAreCalibrated()) {
-    vTaskDelayUntil(&lastWakeTime, F2T(RATE_MAIN_LOOP));
-  }
+	// Wait for sensors to be calibrated
+	lastWakeTime = xTaskGetTickCount ();
+	while(!sensorsAreCalibrated()) {
+		vTaskDelayUntil(&lastWakeTime, F2T(RATE_MAIN_LOOP));
+	}
 
-  while(1) {
-    vTaskDelayUntil(&lastWakeTime, F2T(RATE_MAIN_LOOP));
+	while(1) {
+		vTaskDelayUntil(&lastWakeTime, F2T(RATE_MAIN_LOOP));
 
-    getExtPosition(&state);
+		getExtPosition(&state);
 #ifdef ESTIMATOR_TYPE_kalman
-    stateEstimatorUpdate(&state, &sensorData, &control);
+		stateEstimatorUpdate(&state, &sensorData, &control);
 #else
-    sensorsAcquire(&sensorData, tick);
-    sensorData.range.front = proximityVL6180xFreeRunningRanging(FRONT,tick);
-    sensorData.range.back = proximityVL6180xFreeRunningRanging(BACK,tick);
-    stateEstimator(&state, &sensorData, tick);
+		sensorsAcquire(&sensorData, tick);
+//		uint8_t range_data;
+		sensorData.range.front = proximityVL6180xFreeRunningRanging(tick);
+//		sensorData.range.front = range_data;
+//		if (range_data != NULL){
+//			sensorData.range.front = range_data[0];
+//			sensorData.range.back = range_data[1];
+//		}
+		stateEstimator(&state, &sensorData, tick);
 #endif
 
-    commanderGetSetpoint(&setpoint, &state);
+		commanderGetSetpoint(&setpoint, &state);
 
-    sitAwUpdateSetpoint(&setpoint, &sensorData, &state);
+		sitAwUpdateSetpoint(&setpoint, &sensorData, &state);
 
-    stateController(&control, &setpoint, &sensorData, &state, tick);
-    powerDistribution(&control);
+		stateController(&control, &setpoint, &sensorData, &state, tick);
+		powerDistribution(&control);
 
-    tick++;
-  }
+		tick++;
+	}
 }
 
 LOG_GROUP_START(ctrltarget)
