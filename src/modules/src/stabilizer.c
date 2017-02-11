@@ -121,7 +121,7 @@ static void stabilizerTask(void* param)
 #else
 		sensorsAcquire(&sensorData, tick);
 //		uint8_t range_data;
-//		sensorData.range.front = proximityVL6180xFreeRunningRanging(tick);
+		proximityVL6180xFreeRunningRanging(tick);
 //		sensorData.range.front = range_data;
 //		if (range_data != NULL){
 //			sensorData.range.front = range_data[0];
@@ -166,12 +166,12 @@ LOG_ADD(LOG_FLOAT, temp, &sensorData.baro.temperature)
 LOG_ADD(LOG_FLOAT, pressure, &sensorData.baro.pressure)
 LOG_GROUP_STOP(baro)
 
-LOG_GROUP_START(vl6180x)
-LOG_ADD(LOG_FLOAT, front, &sensorData.range.front)
-LOG_ADD(LOG_FLOAT, back, &sensorData.range.back)
-LOG_ADD(LOG_FLOAT, right, &sensorData.range.right)
-LOG_ADD(LOG_FLOAT, left, &sensorData.range.left)
-LOG_GROUP_STOP(vl6180x)
+//LOG_GROUP_START(vl6180x)
+//LOG_ADD(LOG_FLOAT, front, &sensorData.range.front)
+//LOG_ADD(LOG_FLOAT, back, &sensorData.range.back)
+//LOG_ADD(LOG_FLOAT, right, &sensorData.range.right)
+//LOG_ADD(LOG_FLOAT, left, &sensorData.range.left)
+//LOG_GROUP_STOP(vl6180x)
 
 LOG_GROUP_START(gyro)
 LOG_ADD(LOG_FLOAT, x, &sensorData.gyro.x)
@@ -191,7 +191,7 @@ LOG_GROUP_STOP(controller)
 
 LOG_GROUP_START(range2)
 //LOG_ADD(LOG_FLOAT, light, &light_last)
-LOG_ADD(LOG_UINT8, range, &sensorData.range.front)
+//LOG_ADD(LOG_UINT8, range, &sensorData.range.front)
 LOG_ADD(LOG_UINT8, range1, &range_last2[0])
 LOG_ADD(LOG_UINT8, range2, &range_last2[1])
 LOG_GROUP_STOP(range2)

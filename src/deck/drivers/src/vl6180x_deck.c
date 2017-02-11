@@ -104,6 +104,18 @@
 #define VL6180X_I2C_SLAVE_DEVICE_ADDRESS             0x0212
 #define VL6180X_INTERLEAVED_MODE_ENABLE              0x02A3
 
+#define VL6180X_ERROR_NONE         0
+#define VL6180X_ERROR_SYSERR_1     1
+#define VL6180X_ERROR_SYSERR_5     5
+#define VL6180X_ERROR_ECEFAIL      6
+#define VL6180X_ERROR_NOCONVERGE   7
+#define VL6180X_ERROR_RANGEIGNORE  8
+#define VL6180X_ERROR_SNR          11
+#define VL6180X_ERROR_RAWUFLOW     12
+#define VL6180X_ERROR_RAWOFLOW     13
+#define VL6180X_ERROR_RANGEUFLOW   14
+#define VL6180X_ERROR_RANGEOFLOW   15
+
 
 typedef struct
 {
@@ -157,6 +169,7 @@ static bool VL6180x_setRegister(uint16_t registerAddr, uint8_t data);
 static uint8_t VL6180x_getRegister(uint16_t registerAddr);
 //static float VL6180xGetAmbientLight(vl6180x_als_gain VL6180X_ALS_GAIN);
 static uint8_t VL6180xGetDistance();
+static uint8_t readRangeStatus(void);
 
 static uint8_t devAddr;
 static I2C_Dev *I2Cx;
@@ -165,6 +178,8 @@ static bool isInit;
 static uint8_t range_last = 0;
 uint8_t range_last2[2] = {0, 0};
 //static float light_last = 0.0;
+uint8_t status[2] = {0, 0};
+
 
 // Record the current time to check an upcoming timeout against
 #define startTimeout() (timeout_start_ms = xTaskGetTickCount())
@@ -322,6 +337,7 @@ void vl6180xTask(void* arg)
 //  return alsCalculated;
 //}
 
+
 uint8_t VL6180xGetDistance()
 {
 	//  DEBUG_PRINT("VL6180xGetDistance...\n");
@@ -333,16 +349,176 @@ uint8_t VL6180xGetDistance()
 	return distance;
 }
 
+/**************************************************************************/
+/*!
+    @brief  Error message (retreive after ranging)
+ */
+/**************************************************************************/
+
+uint8_t readRangeStatus(void) {
+	return (VL6180x_getRegister(VL6180X_RESULT_RANGE_STATUS) >> 4);
+}
+
+
 //TickType_t xLastWakeTime;
 void proximityVL6180xFreeRunningRanging(const uint32_t tick)
 {
 
+	//	if (RATE_DO_EXECUTE(100, tick)) {
+	//			digitalWrite(DECK_GPIO_IO1, LOW);
+	//			range_last2[0] = VL6180xGetDistance();
+	//			digitalWrite(DECK_GPIO_IO1, HIGH);
+	//			range_last2[1] = VL6180xGetDistance();
+	//		}
+
 	if (RATE_DO_EXECUTE(100, tick)) {
 		digitalWrite(DECK_GPIO_IO1, LOW);
-		range_last2[0] = VL6180xGetDistance();
+		// wait for device to be ready for range measurement
+		while (! (VL6180x_getRegister(VL6180X_RESULT_RANGE_STATUS) & 0x01));
+
+		// Start a range measurement
+		VL6180x_setRegister(VL6180X_SYSRANGE_START, 0x01);
+
+		// Poll until bit 2 is set
+		while (! (VL6180x_getRegister(VL6180X_RESULT_INTERRUPT_STATUS_GPIO) & 0x04));
+
+		// read range in mm
+		range_last2[0] = VL6180x_getRegister(VL6180X_RESULT_RANGE_VAL);
+
+		// clear interrupt
+		VL6180x_setRegister(VL6180X_SYSTEM_INTERRUPT_CLEAR, 0x07);
+
+		status[0] = readRangeStatus();
+
+		//		  if (status[0] == VL6180X_ERROR_NONE) {
+		//			  DEBUG_PRINT("No error");
+		//		  }
+
+		// Some error occurred, print it out!
+
+		//		if  ((status[0] >= VL6180X_ERROR_SYSERR_1) && (status[0] <= VL6180X_ERROR_SYSERR_5)) {
+		//			DEBUG_PRINT("System error");
+		//		}
+		//		else if (status[0] == VL6180X_ERROR_ECEFAIL) {
+		//			DEBUG_PRINT("ECE failure");
+		//		}
+		//		else if (status[0] == VL6180X_ERROR_NOCONVERGE) {
+		//			DEBUG_PRINT("No convergence");
+		//		}
+		//		else if (status[0] == VL6180X_ERROR_RANGEIGNORE) {
+		//			DEBUG_PRINT("Ignoring range");
+		//		}
+		//		else if (status[0]== VL6180X_ERROR_SNR) {
+		//			DEBUG_PRINT("Signal/Noise error");
+		//		}
+		//		else if (status[0] == VL6180X_ERROR_RAWUFLOW) {
+		//			DEBUG_PRINT("Raw reading underflow");
+		//		}
+		//		else if (status[0] == VL6180X_ERROR_RAWOFLOW) {
+		//			DEBUG_PRINT("Raw reading overflow");
+		//		}
+		//		else if (status[0] == VL6180X_ERROR_RANGEUFLOW) {
+		//			DEBUG_PRINT("Range reading underflow");
+		//		}
+		//		else if (status[0] == VL6180X_ERROR_RANGEOFLOW) {
+		//			DEBUG_PRINT("Range reading overflow");
+		//		}
+
+
 		digitalWrite(DECK_GPIO_IO1, HIGH);
-		range_last2[1] = VL6180xGetDistance();
+		// wait for device to be ready for range measurement
+		while (! (VL6180x_getRegister(VL6180X_RESULT_RANGE_STATUS) & 0x01));
+
+		// Start a range measurement
+		VL6180x_setRegister(VL6180X_SYSRANGE_START, 0x01);
+
+		// Poll until bit 2 is set
+		while (! (VL6180x_getRegister(VL6180X_RESULT_INTERRUPT_STATUS_GPIO) & 0x04));
+
+		// read range in mm
+		range_last2[1] = VL6180x_getRegister(VL6180X_RESULT_RANGE_VAL);
+
+		// clear interrupt
+		VL6180x_setRegister(VL6180X_SYSTEM_INTERRUPT_CLEAR, 0x07);
+
+		status[1] = readRangeStatus();
+
+		//				  if (status[1] == VL6180X_ERROR_NONE) {
+		//					  DEBUG_PRINT("No error");
+		//				  }
+
+		// Some error occurred, print it out!
+
+		//		if  ((status[1] >= VL6180X_ERROR_SYSERR_1) && (status[1] <= VL6180X_ERROR_SYSERR_5)) {
+		//			DEBUG_PRINT("System error");
+		//		}
+		//		else if (status[1] == VL6180X_ERROR_ECEFAIL) {
+		//			DEBUG_PRINT("ECE failure");
+		//		}
+		//		else if (status[1] == VL6180X_ERROR_NOCONVERGE) {
+		//			DEBUG_PRINT("No convergence");
+		//		}
+		//		else if (status[1] == VL6180X_ERROR_RANGEIGNORE) {
+		//			DEBUG_PRINT("Ignoring range");
+		//		}
+		//		else if (status[1] == VL6180X_ERROR_SNR) {
+		//			DEBUG_PRINT("Signal/Noise error");
+		//		}
+		//		else if (status[1] == VL6180X_ERROR_RAWUFLOW) {
+		//			DEBUG_PRINT("Raw reading underflow");
+		//		}
+		//		else if (status[1] == VL6180X_ERROR_RAWOFLOW) {
+		//			DEBUG_PRINT("Raw reading overflow");
+		//		}
+		//		else if (status[1] == VL6180X_ERROR_RANGEUFLOW) {
+		//			DEBUG_PRINT("Range reading underflow");
+		//		}
+		//		else if (status[1] == VL6180X_ERROR_RANGEOFLOW) {
+		//			DEBUG_PRINT("Range reading overflow");
+		//		}
 	}
+
+
+	//	if (RATE_DO_EXECUTE(500, tick)) {
+	//		digitalWrite(DECK_GPIO_IO1, LOW);
+	//		if ((0b00000100 & VL6180x_getRegister(VL6180X_RESULT_INTERRUPT_STATUS_GPIO))>>2){
+	//			range_last2[0] = VL6180x_getRegister(VL6180X_RESULT_RANGE_VAL);
+	//			VL6180x_setRegister(VL6180X_SYSTEM_INTERRUPT_CLEAR, 0x07);
+	//		}
+	//		else if (0b00000001 & VL6180x_getRegister(VL6180X_RESULT_RANGE_STATUS)){
+	//			VL6180x_setRegister(VL6180X_SYSRANGE_START, 0x01); //Start Single shot mode
+	//		}
+	//
+	//		digitalWrite(DECK_GPIO_IO1, HIGH);
+	//		if ((0b00000100 & VL6180x_getRegister(VL6180X_RESULT_INTERRUPT_STATUS_GPIO))>>2){
+	//			range_last2[1] = VL6180x_getRegister(VL6180X_RESULT_RANGE_VAL);
+	//			VL6180x_setRegister(VL6180X_SYSTEM_INTERRUPT_CLEAR, 0x07);
+	//		}
+	//		else if (0b00000001 & VL6180x_getRegister(VL6180X_RESULT_RANGE_STATUS)){
+	//			VL6180x_setRegister(VL6180X_SYSRANGE_START, 0x01); //Start Single shot mode
+	//		}
+	//	}
+
+
+
+	//	if (RATE_DO_EXECUTE(100, tick)) {
+	//		digitalWrite(DECK_GPIO_IO1, LOW);
+	//		if ((0b00000001 & VL6180x_getRegister(VL6180X_RESULT_RANGE_STATUS)) & ((0b00000100 & VL6180x_getRegister(VL6180X_RESULT_INTERRUPT_STATUS_GPIO))>>2))
+	//			range_last2[0] = VL6180xGetDistance();
+	//		digitalWrite(DECK_GPIO_IO1, HIGH);
+	//		if ((0b00000001 & VL6180x_getRegister(VL6180X_RESULT_RANGE_STATUS)) & ((0b00000100 & VL6180x_getRegister(VL6180X_RESULT_INTERRUPT_STATUS_GPIO))>>2))
+	//			range_last2[1] = VL6180xGetDistance();
+	//	}
+
+
+	//	if (RATE_DO_EXECUTE(100, tick)) {
+	//		digitalWrite(DECK_GPIO_IO1, LOW);
+	//		if ((0b00000001 & VL6180x_getRegister(VL6180X_RESULT_RANGE_STATUS)) & ((0b00000100 & VL6180x_getRegister(VL6180X_RESULT_INTERRUPT_STATUS_GPIO))>>2))
+	//			sensorData->range.front = VL6180xGetDistance();
+	//		digitalWrite(DECK_GPIO_IO1, HIGH);
+	//		if ((0b00000001 & VL6180x_getRegister(VL6180X_RESULT_RANGE_STATUS)) & ((0b00000100 & VL6180x_getRegister(VL6180X_RESULT_INTERRUPT_STATUS_GPIO))>>2))
+	//			sensorData->range.back = VL6180xGetDistance();
+	//	}
 }
 
 
@@ -519,6 +695,7 @@ bool vl6180xInitSensor()
 	VL6180x_setRegister(VL6180X_FIRMWARE_RESULT_SCALER,0x01);
 	//DEBUG_PRINT("vl6180xInitSensor test %d\n", i++);
 
+	VL6180x_setRegister(VL6180X_SYSTEM_FRESH_OUT_OF_RESET, 0x00);
 	return true;
 }
 
@@ -580,4 +757,9 @@ DECK_DRIVER(vl6180x_deck);
 //LOG_ADD(LOG_UINT8, range1, &range_last2[0])
 //LOG_ADD(LOG_UINT8, range2, &range_last2[1])
 //LOG_GROUP_STOP(range)
+
+LOG_GROUP_START(vl6180x_status)
+LOG_ADD(LOG_UINT8, status1, &status[0])
+LOG_ADD(LOG_UINT8, status2, &status[1])
+LOG_GROUP_STOP(vl6180x_status)
 
