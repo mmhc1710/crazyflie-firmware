@@ -57,6 +57,8 @@ static sensorData_t sensorData;
 static state_t state;
 static control_t control;
 
+extern uint8_t range_last2[2];
+
 static void stabilizerTask(void* param);
 
 void stabilizerInit(void)
@@ -187,4 +189,10 @@ LOG_GROUP_START(controller)
 LOG_ADD(LOG_INT16, ctr_yaw, &control.yaw)
 LOG_GROUP_STOP(controller)
 
+LOG_GROUP_START(range2)
+//LOG_ADD(LOG_FLOAT, light, &light_last)
+LOG_ADD(LOG_UINT8, range, &sensorData.range.front)
+LOG_ADD(LOG_UINT8, range1, &range_last2[0])
+LOG_ADD(LOG_UINT8, range2, &range_last2[1])
+LOG_GROUP_STOP(range2)
 

@@ -163,7 +163,7 @@ static I2C_Dev *I2Cx;
 static bool isInit;
 
 static uint8_t range_last = 0;
-static uint8_t range_last2[2] = {0, 0};
+uint8_t range_last2[2] = {0, 0};
 //static float light_last = 0.0;
 
 // Record the current time to check an upcoming timeout against
