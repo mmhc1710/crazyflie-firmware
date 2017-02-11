@@ -371,7 +371,7 @@ void proximityVL6180xFreeRunningRanging(const uint32_t tick)
 	//			range_last2[1] = VL6180xGetDistance();
 	//		}
 
-	if (RATE_DO_EXECUTE(100, tick)) {
+	if (RATE_DO_EXECUTE(500, tick)) {
 		digitalWrite(DECK_GPIO_IO1, LOW);
 		// wait for device to be ready for range measurement
 		while (! (VL6180x_getRegister(VL6180X_RESULT_RANGE_STATUS) & 0x01));
@@ -382,17 +382,19 @@ void proximityVL6180xFreeRunningRanging(const uint32_t tick)
 		// Poll until bit 2 is set
 		while (! (VL6180x_getRegister(VL6180X_RESULT_INTERRUPT_STATUS_GPIO) & 0x04));
 
+		uint8_t distance= 0;
 		// read range in mm
-		range_last2[0] = VL6180x_getRegister(VL6180X_RESULT_RANGE_VAL);
+		distance = VL6180x_getRegister(VL6180X_RESULT_RANGE_VAL);
 
 		// clear interrupt
 		VL6180x_setRegister(VL6180X_SYSTEM_INTERRUPT_CLEAR, 0x07);
 
 		status[0] = readRangeStatus();
 
-		//		  if (status[0] == VL6180X_ERROR_NONE) {
-		//			  DEBUG_PRINT("No error");
-		//		  }
+		if (status[0] == VL6180X_ERROR_NONE) {
+			range_last2[0] = distance;
+		}
+		else range_last2[0] = 0;
 
 		// Some error occurred, print it out!
 
@@ -435,17 +437,19 @@ void proximityVL6180xFreeRunningRanging(const uint32_t tick)
 		// Poll until bit 2 is set
 		while (! (VL6180x_getRegister(VL6180X_RESULT_INTERRUPT_STATUS_GPIO) & 0x04));
 
+		distance = 0;
 		// read range in mm
-		range_last2[1] = VL6180x_getRegister(VL6180X_RESULT_RANGE_VAL);
+		distance = VL6180x_getRegister(VL6180X_RESULT_RANGE_VAL);
 
 		// clear interrupt
 		VL6180x_setRegister(VL6180X_SYSTEM_INTERRUPT_CLEAR, 0x07);
 
 		status[1] = readRangeStatus();
 
-		//				  if (status[1] == VL6180X_ERROR_NONE) {
-		//					  DEBUG_PRINT("No error");
-		//				  }
+		if (status[1] == VL6180X_ERROR_NONE) {
+			range_last2[1] = distance;
+		}
+		else range_last2[1] = 0;
 
 		// Some error occurred, print it out!
 
