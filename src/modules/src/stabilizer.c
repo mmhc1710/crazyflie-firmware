@@ -121,7 +121,7 @@ static void stabilizerTask(void* param)
 #else
 		sensorsAcquire(&sensorData, tick);
 //		uint8_t range_data;
-		sensorData.range.front = proximityVL6180xFreeRunningRanging(tick);
+//		sensorData.range.front = proximityVL6180xFreeRunningRanging(tick);
 //		sensorData.range.front = range_data;
 //		if (range_data != NULL){
 //			sensorData.range.front = range_data[0];

@@ -334,60 +334,15 @@ uint8_t VL6180xGetDistance()
 }
 
 //TickType_t xLastWakeTime;
-uint8_t proximityVL6180xFreeRunningRanging(const uint32_t tick)
+void proximityVL6180xFreeRunningRanging(const uint32_t tick)
 {
-	//		switch (sel){
-	//		case 0: digitalWrite(DECK_GPIO_IO1, LOW);
-	//		if (digitalRead(DECK_GPIO_IO1)!=LOW){
-	//			DEBUG_PRINT("Pin not low!");
-	//			return 1;
-	//		}
-	//		break;
-	//		case 1: digitalWrite(DECK_GPIO_IO1, HIGH);
-	//		if (digitalRead(DECK_GPIO_IO1)!=HIGH){
-	//			DEBUG_PRINT("Pin not high!");
-	//			return 1;
-	//		}
-	//		break;
-	//		}
 
-
-	//	if (sel==0){
-	//		digitalWrite(DECK_GPIO_IO1, LOW);
-	//		if (digitalRead(DECK_GPIO_IO1)!=LOW){
-	//			DEBUG_PRINT("Pin not low!");
-	//			return 1;
-	//		}
-	//	}
-	//	else if(sel==1){
-	//		digitalWrite(DECK_GPIO_IO1, HIGH);
-	//		if (digitalRead(DECK_GPIO_IO1)!=HIGH){
-	//			DEBUG_PRINT("Pin not high!");
-	//			return 1;
-	//		}
-	//	}
-
-		if (RATE_DO_EXECUTE(100, tick)) {
-			digitalWrite(DECK_GPIO_IO1, LOW);
-//			sensorData->range.front = VL6180xGetDistance();
-//			digitalWrite(DECK_GPIO_IO1, HIGH);
-//			sensorData->range.back = VL6180xGetDistance();
-			range_last2[0] = VL6180xGetDistance();
-			digitalWrite(DECK_GPIO_IO1, HIGH);
-			range_last2[1] = VL6180xGetDistance();
-
-			return range_last;
-		}
-//	if (RATE_DO_EXECUTE(100, tick)) {
-//		digitalWrite(DECK_GPIO_IO1, LOW);
-//		if ((0b00000001 & VL6180x_getRegister(VL6180X_RESULT_RANGE_STATUS)) & ((0b00000100 & VL6180x_getRegister(VL6180X_RESULT_INTERRUPT_STATUS_GPIO))>>2))
-//			sensorData->range.front = VL6180xGetDistance();
-//		digitalWrite(DECK_GPIO_IO1, HIGH);
-//		if ((0b00000001 & VL6180x_getRegister(VL6180X_RESULT_RANGE_STATUS)) & ((0b00000100 & VL6180x_getRegister(VL6180X_RESULT_INTERRUPT_STATUS_GPIO))>>2))
-//			sensorData->range.back = VL6180xGetDistance();
-//	}
-		return range_last;
-
+	if (RATE_DO_EXECUTE(100, tick)) {
+		digitalWrite(DECK_GPIO_IO1, LOW);
+		range_last2[0] = VL6180xGetDistance();
+		digitalWrite(DECK_GPIO_IO1, HIGH);
+		range_last2[1] = VL6180xGetDistance();
+	}
 }
 
 
@@ -619,10 +574,10 @@ static const DeckDriver vl6180x_deck = {
 
 DECK_DRIVER(vl6180x_deck);
 
-LOG_GROUP_START(range)
-//LOG_ADD(LOG_FLOAT, light, &light_last)
-LOG_ADD(LOG_UINT8, range, &range_last)
-LOG_ADD(LOG_UINT8, range1, &range_last2[0])
-LOG_ADD(LOG_UINT8, range2, &range_last2[1])
-LOG_GROUP_STOP(range)
+//LOG_GROUP_START(range)
+////LOG_ADD(LOG_FLOAT, light, &light_last)
+//LOG_ADD(LOG_UINT8, range, &range_last)
+//LOG_ADD(LOG_UINT8, range1, &range_last2[0])
+//LOG_ADD(LOG_UINT8, range2, &range_last2[1])
+//LOG_GROUP_STOP(range)
 

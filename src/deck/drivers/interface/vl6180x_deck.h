@@ -29,5 +29,5 @@
 #include "stabilizer_types.h"
 #define FRONT 0
 #define BACK 1
-uint8_t proximityVL6180xFreeRunningRanging(const uint32_t tick);
+void proximityVL6180xFreeRunningRanging(const uint32_t tick);
 #endif /* _VL6180X_DECK_H_ */
