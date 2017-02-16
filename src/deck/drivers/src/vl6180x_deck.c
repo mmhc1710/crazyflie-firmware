@@ -176,9 +176,9 @@ static I2C_Dev *I2Cx;
 static bool isInit;
 
 static uint8_t range_last = 0;
-uint8_t range_last2[2] = {0, 0};
+uint8_t range_last2[3] = {0, 0, 0};
 //static float light_last = 0.0;
-uint8_t status[2] = {0, 0};
+uint8_t status[3] = {0, 0, 0};
 
 
 // Record the current time to check an upcoming timeout against
@@ -219,6 +219,7 @@ void vl6180xInit(DeckInfo* info)
 	I2Cx = I2C1_DEV;
 	devAddr = VL6180X_DEFAULT_ADDRESS;
 	pinMode(DECK_GPIO_IO1, OUTPUT);
+	pinMode(DECK_GPIO_IO2, OUTPUT);
 
 	//  xTaskCreate(vl6180xTask, "vl6180x", 2*configMINIMAL_STACK_SIZE, NULL, 3, NULL);
 
@@ -233,6 +234,7 @@ bool vl6180xTest(void)
 		return false;
 
 	digitalWrite(DECK_GPIO_IO1, LOW);
+	digitalWrite(DECK_GPIO_IO2, LOW);
 	testStatus  = vl6180xTestConnection();
 	DEBUG_PRINT("vl6180xTestConnection1 done...!\n");
 	DEBUG_PRINT("testStatus1 = %d\n", testStatus);
@@ -242,13 +244,26 @@ bool vl6180xTest(void)
 	delay(1000);
 
 	digitalWrite(DECK_GPIO_IO1, HIGH);
+	digitalWrite(DECK_GPIO_IO2, LOW);
 	testStatus  = vl6180xTestConnection();
 	DEBUG_PRINT("vl6180xTestConnection2 done...!\n");
 	DEBUG_PRINT("testStatus2 = %d\n", testStatus);
 	testStatus &= vl6180xInitSensor();
 	DEBUG_PRINT("vl6180xInitSensor2 done...!\n");
 	DEBUG_PRINT("testStatus2 = %d\n", testStatus);
+	delay(1000);
+
 	digitalWrite(DECK_GPIO_IO1, LOW);
+	digitalWrite(DECK_GPIO_IO2, HIGH);
+	testStatus  = vl6180xTestConnection();
+	DEBUG_PRINT("vl6180xTestConnection3 done...!\n");
+	DEBUG_PRINT("testStatus3 = %d\n", testStatus);
+	testStatus &= vl6180xInitSensor();
+	DEBUG_PRINT("vl6180xInitSensor3 done...!\n");
+	DEBUG_PRINT("testStatus3 = %d\n", testStatus);
+
+	digitalWrite(DECK_GPIO_IO1, LOW);
+	digitalWrite(DECK_GPIO_IO2, LOW);
 
 	//  digitalWrite(DECK_GPIO_IO1, HIGH);
 	//  testStatus  = vl6180xTestConnection();
@@ -373,6 +388,8 @@ void proximityVL6180xFreeRunningRanging(const uint32_t tick)
 
 	if (RATE_DO_EXECUTE(500, tick)) {
 		digitalWrite(DECK_GPIO_IO1, LOW);
+		digitalWrite(DECK_GPIO_IO2, LOW);
+
 		// wait for device to be ready for range measurement
 		while (! (VL6180x_getRegister(VL6180X_RESULT_RANGE_STATUS) & 0x01));
 
@@ -428,6 +445,7 @@ void proximityVL6180xFreeRunningRanging(const uint32_t tick)
 
 
 		digitalWrite(DECK_GPIO_IO1, HIGH);
+		digitalWrite(DECK_GPIO_IO2, LOW);
 		// wait for device to be ready for range measurement
 		while (! (VL6180x_getRegister(VL6180X_RESULT_RANGE_STATUS) & 0x01));
 
@@ -450,6 +468,32 @@ void proximityVL6180xFreeRunningRanging(const uint32_t tick)
 			range_last2[1] = distance;
 		}
 		else range_last2[1] = 0;
+
+
+		digitalWrite(DECK_GPIO_IO1, LOW);
+		digitalWrite(DECK_GPIO_IO2, HIGH);
+		// wait for device to be ready for range measurement
+		while (! (VL6180x_getRegister(VL6180X_RESULT_RANGE_STATUS) & 0x01));
+
+		// Start a range measurement
+		VL6180x_setRegister(VL6180X_SYSRANGE_START, 0x01);
+
+		// Poll until bit 2 is set
+		while (! (VL6180x_getRegister(VL6180X_RESULT_INTERRUPT_STATUS_GPIO) & 0x04));
+
+		distance = 0;
+		// read range in mm
+		distance = VL6180x_getRegister(VL6180X_RESULT_RANGE_VAL);
+
+		// clear interrupt
+		VL6180x_setRegister(VL6180X_SYSTEM_INTERRUPT_CLEAR, 0x07);
+
+		status[2] = readRangeStatus();
+
+		if (status[2] == VL6180X_ERROR_NONE) {
+			range_last2[2] = distance;
+		}
+		else range_last2[2] = 0;
 
 		// Some error occurred, print it out!
 
@@ -747,7 +791,7 @@ static const DeckDriver vl6180x_deck = {
 		.vid = 0,
 		.pid = 0,
 		.name = "vl6180x_deck",
-		.usedGpio = DECK_GPIO_IO1,
+		.usedGpio = DECK_GPIO_IO1 | DECK_GPIO_IO2,
 
 		.init = vl6180xInit,
 		.test = vl6180xTest,
@@ -755,15 +799,17 @@ static const DeckDriver vl6180x_deck = {
 
 DECK_DRIVER(vl6180x_deck);
 
-//LOG_GROUP_START(range)
+LOG_GROUP_START(range)
 ////LOG_ADD(LOG_FLOAT, light, &light_last)
 //LOG_ADD(LOG_UINT8, range, &range_last)
-//LOG_ADD(LOG_UINT8, range1, &range_last2[0])
-//LOG_ADD(LOG_UINT8, range2, &range_last2[1])
-//LOG_GROUP_STOP(range)
+LOG_ADD(LOG_UINT8, range1, &range_last2[0])
+LOG_ADD(LOG_UINT8, range2, &range_last2[1])
+LOG_ADD(LOG_UINT8, range3, &range_last2[2])
+LOG_GROUP_STOP(range)
 
 LOG_GROUP_START(vl6180x_status)
 LOG_ADD(LOG_UINT8, status1, &status[0])
 LOG_ADD(LOG_UINT8, status2, &status[1])
+LOG_ADD(LOG_UINT8, status3, &status[2])
 LOG_GROUP_STOP(vl6180x_status)
 

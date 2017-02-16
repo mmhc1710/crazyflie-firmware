@@ -57,7 +57,7 @@ static sensorData_t sensorData;
 static state_t state;
 static control_t control;
 
-extern uint8_t range_last2[2];
+extern uint8_t range_last2[3];
 
 static void stabilizerTask(void* param);
 
@@ -194,5 +194,6 @@ LOG_GROUP_START(range2)
 //LOG_ADD(LOG_UINT8, range, &sensorData.range.front)
 LOG_ADD(LOG_UINT8, range1, &range_last2[0])
 LOG_ADD(LOG_UINT8, range2, &range_last2[1])
+LOG_ADD(LOG_UINT8, range3, &range_last2[2])
 LOG_GROUP_STOP(range2)
 
