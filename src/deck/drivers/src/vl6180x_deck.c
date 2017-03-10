@@ -411,7 +411,7 @@ void proximityVL6180xFreeRunningRanging(const uint32_t tick)
 		if (status[0] == VL6180X_ERROR_NONE) {
 			range_last2[0] = distance;
 		}
-		else range_last2[0] = 0;
+		else range_last2[0] = 255;
 
 		// Some error occurred, print it out!
 
@@ -467,7 +467,7 @@ void proximityVL6180xFreeRunningRanging(const uint32_t tick)
 		if (status[1] == VL6180X_ERROR_NONE) {
 			range_last2[1] = distance;
 		}
-		else range_last2[1] = 0;
+		else range_last2[1] = 255;
 
 
 		digitalWrite(DECK_GPIO_IO1, LOW);
@@ -493,7 +493,7 @@ void proximityVL6180xFreeRunningRanging(const uint32_t tick)
 		if (status[2] == VL6180X_ERROR_NONE) {
 			range_last2[2] = distance;
 		}
-		else range_last2[2] = 0;
+		else range_last2[2] = 255;
 
 		// Some error occurred, print it out!
 
