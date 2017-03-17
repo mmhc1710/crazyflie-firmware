@@ -64,7 +64,7 @@ static bool did_timeout;
 static uint16_t timeout_start_ms;
 
 static uint8_t DeviceRangeStatusInternal = 0;
-static uint16_t range_last = 0;
+uint16_t range_last = 0;
 
 // Record the current time to check an upcoming timeout against
 #define startTimeout() (timeout_start_ms = xTaskGetTickCount())
