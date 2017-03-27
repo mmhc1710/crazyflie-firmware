@@ -63,7 +63,7 @@ static uint16_t io_timeout = 0;
 static bool did_timeout;
 static uint16_t timeout_start_ms;
 
-static uint8_t DeviceRangeStatusInternal = 0;
+uint8_t DeviceRangeStatusInternal = 0;
 uint16_t range_last = 0;
 
 // Record the current time to check an upcoming timeout against
@@ -1163,8 +1163,8 @@ static const DeckDriver vl53l0x_deck = {
 
 DECK_DRIVER(vl53l0x_deck);
 
-LOG_GROUP_START(range)
-LOG_ADD(LOG_UINT16, range, &range_last)
-LOG_ADD(LOG_UINT8, rangeStatus, &DeviceRangeStatusInternal)
-LOG_GROUP_STOP(range)
+//LOG_GROUP_START(range)
+//LOG_ADD(LOG_UINT16, range, &range_last)
+//LOG_ADD(LOG_UINT8, rangeStatus, &DeviceRangeStatusInternal)
+//LOG_GROUP_STOP(range)
 

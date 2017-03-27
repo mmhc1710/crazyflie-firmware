@@ -55,8 +55,6 @@ static sensorData_t sensorData;
 static state_t state;
 static control_t control;
 
-extern uint16_t range_last;
-extern uint8_t DeviceRangeStatusInternal;
 static void stabilizerTask(void* param);
 
 void stabilizerInit(void)
@@ -118,7 +116,6 @@ static void stabilizerTask(void* param)
     stateEstimatorUpdate(&state, &sensorData, &control);
 #else
     sensorsAcquire(&sensorData, tick);
-    sensorData.baro.asl = range_last;
     stateEstimator(&state, &sensorData, tick);
 #endif
 
@@ -173,12 +170,3 @@ LOG_GROUP_STOP(mag)
 LOG_GROUP_START(controller)
 LOG_ADD(LOG_INT16, ctr_yaw, &control.yaw)
 LOG_GROUP_STOP(controller)
-
-LOG_GROUP_START(range)
-LOG_ADD(LOG_UINT16, range, &range_last)
-LOG_ADD(LOG_UINT8, rangeStatus, &DeviceRangeStatusInternal)
-LOG_GROUP_STOP(range)
-
-LOG_GROUP_START(position)
-LOG_ADD(LOG_FLOAT, z, &state.position.z)
-LOG_GROUP_STOP(position)

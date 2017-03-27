@@ -303,6 +303,11 @@ void commanderGetSetpoint(setpoint_t *setpoint, const state_t *state)
     setpoint->thrust = min(rawThrust, MAX_THRUST);
   }
 
+  if ((state->position.z >= 500) && (state->position.z <= 1800))
+	  altHoldMode = true;
+  else
+	  altHoldMode = false;
+
   if (altHoldMode) {
     setpoint->thrust = 0;
     setpoint->mode.z = modeVelocity;
