@@ -145,9 +145,6 @@ float sinPitch;
 float cosRoll;
 float sinRoll;
 
-extern uint16_t range_last;
-extern uint8_t DeviceRangeStatusInternal;
-
 static void sensorsBiasInit(BiasObj* bias);
 static void sensorsCalculateBiasMean(BiasObj* bias, Axis3i32* meanOut);
 static void sensorsCalculateVarianceAndMean(BiasObj* bias, Axis3f* varOut, Axis3f* meanOut);
@@ -175,11 +172,7 @@ bool sensorsReadMag(Axis3f *mag)
 
 bool sensorsReadBaro(baro_t *baro)
 {
-	baro->pressure = 0.0;
-	baro->temperature = 0.0;
-	baro->asl = range_last;
-	return 1;
-//	return (pdTRUE == xQueueReceive(barometerDataQueue, baro, 0));
+  return (pdTRUE == xQueueReceive(barometerDataQueue, baro, 0));
 }
 
 void sensorsAcquire(sensorData_t *sensors, const uint32_t tick)

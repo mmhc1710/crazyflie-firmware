@@ -1163,8 +1163,8 @@ static const DeckDriver vl53l0x_deck = {
 
 DECK_DRIVER(vl53l0x_deck);
 
-//LOG_GROUP_START(range)
-//LOG_ADD(LOG_UINT16, range, &range_last)
-//LOG_ADD(LOG_UINT8, rangeStatus, &DeviceRangeStatusInternal)
-//LOG_GROUP_STOP(range)
+LOG_GROUP_START(range)
+LOG_ADD(LOG_UINT16, range, &range_last)
+LOG_ADD(LOG_UINT8, rangeStatus, &DeviceRangeStatusInternal)
+LOG_GROUP_STOP(range)
 
