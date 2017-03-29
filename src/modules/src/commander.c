@@ -36,7 +36,7 @@
 #include "num.h"
 #include "debug.h"
 #include "ext_position.h"
-
+extern uint16_t range_last;
 #define MIN_THRUST  1000
 #define MAX_THRUST  60000
 
@@ -303,7 +303,12 @@ void commanderGetSetpoint(setpoint_t *setpoint, const state_t *state)
     setpoint->thrust = min(rawThrust, MAX_THRUST);
   }
 
-//  if ((state->position.z >= 500) && (state->position.z <= 1800))
+  if ((range_last >= 300))// && (state->position.z <= 1800))
+	  altHoldMode = true;
+  else
+	  altHoldMode = false;
+
+//  if ((state->position.z >= 300))// && (state->position.z <= 1800))
 //	  altHoldMode = true;
 //  else
 //	  altHoldMode = false;
