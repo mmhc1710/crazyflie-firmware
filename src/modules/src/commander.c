@@ -303,10 +303,10 @@ void commanderGetSetpoint(setpoint_t *setpoint, const state_t *state)
     setpoint->thrust = min(rawThrust, MAX_THRUST);
   }
 
-  if ((range_last >= 300))// && (state->position.z <= 1800))
-	  altHoldMode = true;
-  else
-	  altHoldMode = false;
+//  if ((range_last >= 300))// && (state->position.z <= 1800))
+//	  altHoldMode = true;
+//  else
+//	  altHoldMode = false;
 
 //  if ((state->position.z >= 300))// && (state->position.z <= 1800))
 //	  altHoldMode = true;

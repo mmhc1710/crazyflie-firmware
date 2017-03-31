@@ -145,6 +145,10 @@ void vl53l0xInit(DeckInfo* info)
   if (isInit)
     return;
 
+  pinMode(DECK_GPIO_IO1, OUTPUT);
+  pinMode(DECK_GPIO_IO2, OUTPUT);
+  pinMode(DECK_GPIO_IO3, OUTPUT);
+  pinMode(DECK_GPIO_IO4, OUTPUT);
   i2cdevInit(I2C1_DEV);
   I2Cx = I2C1_DEV;
   devAddr = VL53L0X_DEFAULT_ADDRESS;
@@ -165,8 +169,14 @@ bool vl53l0xTest(void)
   if (!isInit)
     return false;
        // Measurement noise model
+  digitalWrite(DECK_GPIO_IO1, LOW);
+  digitalWrite(DECK_GPIO_IO2, LOW);
+  digitalWrite(DECK_GPIO_IO3, LOW);
+  digitalWrite(DECK_GPIO_IO4, HIGH);
   testStatus  = vl53l0xTestConnection();
+  if (testStatus) DEBUG_PRINT("Connection test [OK]\n");
   testStatus &= vl53l0xInitSensor(true);
+  if (testStatus) DEBUG_PRINT("Initialization test [OK]\n");
 
   return testStatus;
 }
@@ -208,7 +218,9 @@ bool vl53l0xTestConnection()
 {
   bool ret = true;
   ret &= vl53l0xGetModelID() == VL53L0X_IDENTIFICATION_MODEL_ID;
+  if (ret) DEBUG_PRINT("vl53l0xGetModelID test [OK]\n");
   ret &= vl53l0xGetRevisionID() == VL53L0X_IDENTIFICATION_REVISION_ID;
+  if (ret) DEBUG_PRINT("vl53l0xGetRevisionID test [OK]\n");
   return ret;
 }
 
@@ -1155,8 +1167,7 @@ static const DeckDriver vl53l0x_deck = {
   .vid = 0, // Changed this from 0
   .pid = 0, // Changed this from 0
   .name = "vl53l0x",
-  .usedGpio = 0,
-
+  .usedGpio = DECK_GPIO_IO1 | DECK_GPIO_IO2 | DECK_GPIO_IO3 | DECK_GPIO_IO4,
   .init = vl53l0xInit,
   .test = vl53l0xTest,
 };
