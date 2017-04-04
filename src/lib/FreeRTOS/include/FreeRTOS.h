@@ -827,6 +827,10 @@ point support. */
 	#define configUSE_TASK_FPU_SUPPORT 1
 #endif
 
+//#ifndef ESTIMATOR_TYPE_kalman
+//	#define ESTIMATOR_TYPE_kalman 1
+//#endif
+
 #ifdef __cplusplus
 }
 #endif

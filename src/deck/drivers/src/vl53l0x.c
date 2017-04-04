@@ -38,12 +38,13 @@
 #include "vl53l0x.h"
 
 #include "stabilizer_types.h"
+
 #ifdef ESTIMATOR_TYPE_kalman
 
 #include "estimator_kalman.h"
 #include "arm_math.h"
 
-//#define UPDATE_KALMAN_WITH_RANGING // uncomment to push into the kalman
+#define UPDATE_KALMAN_WITH_RANGING // uncomment to push into the kalman
 #ifdef UPDATE_KALMAN_WITH_RANGING
 #define RANGE_OUTLIER_LIMIT 1500 // the measured range is in [mm]
 // Measurement noise model
@@ -169,14 +170,25 @@ bool vl53l0xTest(void)
   if (!isInit)
     return false;
        // Measurement noise model
-  digitalWrite(DECK_GPIO_IO1, LOW);
-  digitalWrite(DECK_GPIO_IO2, LOW);
-  digitalWrite(DECK_GPIO_IO3, LOW);
-  digitalWrite(DECK_GPIO_IO4, HIGH);
-  testStatus  = vl53l0xTestConnection();
-  if (testStatus) DEBUG_PRINT("Connection test [OK]\n");
-  testStatus &= vl53l0xInitSensor(true);
-  if (testStatus) DEBUG_PRINT("Initialization test [OK]\n");
+  digitalWrite(DECK_GPIO_IO4, LOW);
+  for (int i=1; i<=4; i++){
+	  digitalWrite(DECK_GPIO_IO1, ((i&0b00000001)>>0));
+	  digitalWrite(DECK_GPIO_IO2, ((i&0b00000010)>>1));
+	  digitalWrite(DECK_GPIO_IO3, ((i&0b00000100)>>2));
+
+	  testStatus  = vl53l0xTestConnection();
+	  if (testStatus) DEBUG_PRINT("Connection test [OK]\n");
+	  testStatus &= vl53l0xInitSensor(true);
+	  if (testStatus) DEBUG_PRINT("Initialization test [OK]\n");
+  	}
+//  digitalWrite(DECK_GPIO_IO1, LOW);
+//  digitalWrite(DECK_GPIO_IO2, LOW);
+//  digitalWrite(DECK_GPIO_IO3, LOW);
+
+//  testStatus  = vl53l0xTestConnection();
+//  if (testStatus) DEBUG_PRINT("Connection test [OK]\n");
+//  testStatus &= vl53l0xInitSensor(true);
+//  if (testStatus) DEBUG_PRINT("Initialization test [OK]\n");
 
   return testStatus;
 }
@@ -191,7 +203,14 @@ void vl53l0xTask(void* arg)
   vl53l0xStartContinuous(100);
   while (1) {
     xLastWakeTime = xTaskGetTickCount();
-    range_last = vl53l0xReadRangeContinuousMillimeters();
+    for (int i=1; i<=1; i++){
+  	  digitalWrite(DECK_GPIO_IO1, ((i&0b00000001)>>0));
+  	  digitalWrite(DECK_GPIO_IO2, ((i&0b00000010)>>1));
+  	  digitalWrite(DECK_GPIO_IO3, ((i&0b00000100)>>2));
+
+  	  range_last = vl53l0xReadRangeContinuousMillimeters();
+    	}
+
 #if defined(ESTIMATOR_TYPE_kalman) && defined(UPDATE_KALMAN_WITH_RANGING)
     // check if range is feasible and push into the kalman filter
     // the sensor should not be able to measure >3 [m], and outliers typically
