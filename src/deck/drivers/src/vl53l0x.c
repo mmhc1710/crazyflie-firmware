@@ -66,6 +66,7 @@ static uint16_t timeout_start_ms;
 
 uint8_t DeviceRangeStatusInternal = 0;
 uint16_t range_last = 0;
+uint16_t range_last2[6] = {0,0,0,0,0,0};
 
 // Record the current time to check an upcoming timeout against
 #define startTimeout() (timeout_start_ms = xTaskGetTickCount())
@@ -171,23 +172,25 @@ bool vl53l0xTest(void)
     return false;
        // Measurement noise model
   digitalWrite(DECK_GPIO_IO4, LOW);
-  for (int i=1; i<=4; i++){
+  for (int i=0; i<=4; i++){
 	  digitalWrite(DECK_GPIO_IO1, ((i&0b00000001)>>0));
 	  digitalWrite(DECK_GPIO_IO2, ((i&0b00000010)>>1));
 	  digitalWrite(DECK_GPIO_IO3, ((i&0b00000100)>>2));
 
 	  testStatus  = vl53l0xTestConnection();
-	  if (testStatus) DEBUG_PRINT("Connection test [OK]\n");
+//	  if (testStatus) DEBUG_PRINT("Connection test [OK]\n");
 	  testStatus &= vl53l0xInitSensor(true);
-	  if (testStatus) DEBUG_PRINT("Initialization test [OK]\n");
+//	  if (testStatus) DEBUG_PRINT("Initialization test [OK]\n");
   	}
-//  digitalWrite(DECK_GPIO_IO1, LOW);
-//  digitalWrite(DECK_GPIO_IO2, LOW);
-//  digitalWrite(DECK_GPIO_IO3, LOW);
 
-//  testStatus  = vl53l0xTestConnection();
+   digitalWrite(DECK_GPIO_IO4, HIGH);
+  digitalWrite(DECK_GPIO_IO1, LOW);
+  digitalWrite(DECK_GPIO_IO2, LOW);
+  digitalWrite(DECK_GPIO_IO3, LOW);
+
+  testStatus  = vl53l0xTestConnection();
 //  if (testStatus) DEBUG_PRINT("Connection test [OK]\n");
-//  testStatus &= vl53l0xInitSensor(true);
+  testStatus &= vl53l0xInitSensor(true);
 //  if (testStatus) DEBUG_PRINT("Initialization test [OK]\n");
 
   return testStatus;
@@ -200,16 +203,25 @@ void vl53l0xTask(void* arg)
 
   vl53l0xSetVcselPulsePeriod(VcselPeriodPreRange, 18);
   vl53l0xSetVcselPulsePeriod(VcselPeriodFinalRange, 14);
-  vl53l0xStartContinuous(100);
+//  vl53l0xStartContinuous(0);
+//  vl53l0xStopContinuous();
   while (1) {
     xLastWakeTime = xTaskGetTickCount();
-    for (int i=1; i<=1; i++){
+    digitalWrite(DECK_GPIO_IO4, LOW);
+    for (int i=0; i<=4; i++){
   	  digitalWrite(DECK_GPIO_IO1, ((i&0b00000001)>>0));
   	  digitalWrite(DECK_GPIO_IO2, ((i&0b00000010)>>1));
   	  digitalWrite(DECK_GPIO_IO3, ((i&0b00000100)>>2));
-
-  	  range_last = vl53l0xReadRangeContinuousMillimeters();
+  	range_last2[i] = vl53l0xReadRangeSingleMillimeters();
+//  	  range_last = vl53l0xReadRangeContinuousMillimeters();
     	}
+    digitalWrite(DECK_GPIO_IO4, HIGH);
+      digitalWrite(DECK_GPIO_IO1, LOW);
+      digitalWrite(DECK_GPIO_IO2, LOW);
+      digitalWrite(DECK_GPIO_IO3, LOW);
+      range_last2[5] = vl53l0xReadRangeSingleMillimeters();
+      //  	  range_last = vl53l0xReadRangeContinuousMillimeters();
+      range_last = range_last2[5];
 
 #if defined(ESTIMATOR_TYPE_kalman) && defined(UPDATE_KALMAN_WITH_RANGING)
     // check if range is feasible and push into the kalman filter
@@ -237,9 +249,9 @@ bool vl53l0xTestConnection()
 {
   bool ret = true;
   ret &= vl53l0xGetModelID() == VL53L0X_IDENTIFICATION_MODEL_ID;
-  if (ret) DEBUG_PRINT("vl53l0xGetModelID test [OK]\n");
+//  if (ret) DEBUG_PRINT("vl53l0xGetModelID test [OK]\n");
   ret &= vl53l0xGetRevisionID() == VL53L0X_IDENTIFICATION_REVISION_ID;
-  if (ret) DEBUG_PRINT("vl53l0xGetRevisionID test [OK]\n");
+//  if (ret) DEBUG_PRINT("vl53l0xGetRevisionID test [OK]\n");
   return ret;
 }
 
@@ -944,7 +956,17 @@ uint16_t vl53l0xReadRangeContinuousMillimeters(void)
 
   i2cdevWriteByte(I2Cx, devAddr, VL53L0X_RA_SYSTEM_INTERRUPT_CLEAR, 0x01);
 //  if ((DeviceRangeStatusInternal==6) || (DeviceRangeStatusInternal==9)) return 65535;
-  if (DeviceRangeStatusInternal!=11) return 10000;
+  if (DeviceRangeStatusInternal!=11) return 2000;
+
+//  // assumptions: Linearity Corrective Gain is 1000 (default);
+//  // fractional ranging is not enabled
+//  while ( ((vl53l0xReadReg8Bit(VL53L0X_RA_RESULT_RANGE_STATUS) & 0x78) >> 3)!=11 ) {};
+//  uint16_t range = vl53l0xReadReg16Bit(VL53L0X_RA_RESULT_RANGE_STATUS + 10);
+//
+//  i2cdevWriteByte(I2Cx, devAddr, VL53L0X_RA_SYSTEM_INTERRUPT_CLEAR, 0x01);
+////  if ((DeviceRangeStatusInternal==6) || (DeviceRangeStatusInternal==9)) return 65535;
+////  if (DeviceRangeStatusInternal!=11) return 2000;
+
   return range;
 }
 
@@ -1195,6 +1217,12 @@ DECK_DRIVER(vl53l0x_deck);
 
 LOG_GROUP_START(range)
 LOG_ADD(LOG_UINT16, range, &range_last)
+LOG_ADD(LOG_UINT16, range1, &range_last2[0])
+LOG_ADD(LOG_UINT16, range2, &range_last2[1])
+LOG_ADD(LOG_UINT16, range3, &range_last2[2])
+LOG_ADD(LOG_UINT16, range4, &range_last2[3])
+LOG_ADD(LOG_UINT16, range5, &range_last2[4])
+LOG_ADD(LOG_UINT16, range6, &range_last2[5])
 LOG_ADD(LOG_UINT8, rangeStatus, &DeviceRangeStatusInternal)
 LOG_GROUP_STOP(range)
 
