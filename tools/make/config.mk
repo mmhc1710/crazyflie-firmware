@@ -7,6 +7,7 @@
 # CFLAGS += -DDEBUG_PRINT_ON_UART
 
 ## Load a deck driver that has no OW memory
+CFLAGS += -DDECK_FORCE=vl53l0x
 # CFLAGS += -DDECK_FORCE=bcBuzzer
 
 ## Enable biq quad deck features
