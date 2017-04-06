@@ -65,6 +65,8 @@ static bool did_timeout;
 static uint16_t timeout_start_ms;
 
 uint16_t range_last = 0;
+uint16_t range_last2[6] = {0,0,0,0,0,0};
+uint8_t DeviceRangeStatusInternal = 0;
 
 // Record the current time to check an upcoming timeout against
 #define startTimeout() (timeout_start_ms = xTaskGetTickCount())
@@ -131,6 +133,7 @@ static uint32_t vl53l0xTimeoutMclksToMicroseconds(uint16_t timeout_period_mclks,
 // based on VL53L0X_calc_timeout_mclks()
 static uint32_t vl53l0xTimeoutMicrosecondsToMclks(uint32_t timeout_period_us, uint8_t vcsel_period_pclks);
 
+static uint8_t vl53l0xReadReg8Bit(uint8_t reg);
 static uint16_t vl53l0xReadReg16Bit(uint8_t reg);
 static bool vl53l0xWriteReg16Bit(uint8_t reg, uint16_t val);
 static bool vl53l0xWriteReg32Bit(uint8_t reg, uint32_t val);
@@ -144,6 +147,10 @@ void vl53l0xInit(DeckInfo* info)
   if (isInit)
     return;
 
+  pinMode(DECK_GPIO_IO1, OUTPUT);
+  pinMode(DECK_GPIO_IO2, OUTPUT);
+  pinMode(DECK_GPIO_IO3, OUTPUT);
+  pinMode(DECK_GPIO_IO4, OUTPUT);
   i2cdevInit(I2C1_DEV);
   I2Cx = I2C1_DEV;
   devAddr = VL53L0X_DEFAULT_ADDRESS;
@@ -164,8 +171,27 @@ bool vl53l0xTest(void)
   if (!isInit)
     return false;
        // Measurement noise model
-  testStatus  = vl53l0xTestConnection();
-  testStatus &= vl53l0xInitSensor(true);
+  digitalWrite(DECK_GPIO_IO4, LOW);
+  	for (int i=0; i<=4; i++){
+  		digitalWrite(DECK_GPIO_IO1, ((i&0b00000001)>>0));
+  		digitalWrite(DECK_GPIO_IO2, ((i&0b00000010)>>1));
+  		digitalWrite(DECK_GPIO_IO3, ((i&0b00000100)>>2));
+
+  		testStatus  = vl53l0xTestConnection();
+  		//		if (testStatus) DEBUG_PRINT("[%d] Connection test [OK]\n", i+1);
+  		testStatus &= vl53l0xInitSensor(true);
+  		if (testStatus) DEBUG_PRINT("[%d] Initialization test [OK]\n", i+1);
+  	}
+
+  	//	digitalWrite(DECK_GPIO_IO4, HIGH);
+  	//	digitalWrite(DECK_GPIO_IO1, LOW);
+  	//	digitalWrite(DECK_GPIO_IO2, LOW);
+  	//	digitalWrite(DECK_GPIO_IO3, LOW);
+  	//
+  	//	testStatus  = vl53l0xTestConnection();
+  	//	//	if (testStatus) DEBUG_PRINT("[%d] Connection test [OK]\n", 6);
+  	//	testStatus &= vl53l0xInitSensor(true);
+  	//	if (testStatus) DEBUG_PRINT("[%d] Initialization test [OK]\n", 6);
 
   return testStatus;
 }
@@ -177,10 +203,25 @@ void vl53l0xTask(void* arg)
 
   vl53l0xSetVcselPulsePeriod(VcselPeriodPreRange, 18);
   vl53l0xSetVcselPulsePeriod(VcselPeriodFinalRange, 14);
-  vl53l0xStartContinuous(100);
+//  vl53l0xStartContinuous(100);
   while (1) {
     xLastWakeTime = xTaskGetTickCount();
-    range_last = vl53l0xReadRangeContinuousMillimeters();
+//    range_last = vl53l0xReadRangeContinuousMillimeters();
+    digitalWrite(DECK_GPIO_IO4, LOW);
+    		for (int i=0; i<=4; i++){
+    			digitalWrite(DECK_GPIO_IO1, ((i&0b00000001)>>0));
+    			digitalWrite(DECK_GPIO_IO2, ((i&0b00000010)>>1));
+    			digitalWrite(DECK_GPIO_IO3, ((i&0b00000100)>>2));
+    			range_last2[i] = vl53l0xReadRangeSingleMillimeters();
+    			//  	  range_last = vl53l0xReadRangeContinuousMillimeters();
+    		}
+    //		digitalWrite(DECK_GPIO_IO4, HIGH);
+    //		digitalWrite(DECK_GPIO_IO1, LOW);
+    //		digitalWrite(DECK_GPIO_IO2, LOW);
+    //		digitalWrite(DECK_GPIO_IO3, LOW);
+    //		range_last2[5] = vl53l0xReadRangeSingleMillimeters();
+    //		//  	  range_last = vl53l0xReadRangeContinuousMillimeters();
+    		range_last = range_last2[0];
 #if defined(ESTIMATOR_TYPE_kalman) && defined(UPDATE_KALMAN_WITH_RANGING)
     // check if range is feasible and push into the kalman filter
     // the sensor should not be able to measure >3 [m], and outliers typically
@@ -922,8 +963,11 @@ uint16_t vl53l0xReadRangeContinuousMillimeters(void)
   // assumptions: Linearity Corrective Gain is 1000 (default);
   // fractional ranging is not enabled
   uint16_t range = vl53l0xReadReg16Bit(VL53L0X_RA_RESULT_RANGE_STATUS + 10);
+  DeviceRangeStatusInternal = ((vl53l0xReadReg8Bit(VL53L0X_RA_RESULT_RANGE_STATUS) & 0x78) >> 3);
 
   i2cdevWriteByte(I2Cx, devAddr, VL53L0X_RA_SYSTEM_INTERRUPT_CLEAR, 0x01);
+  //  if ((DeviceRangeStatusInternal==6) || (DeviceRangeStatusInternal==9)) return 65535;
+//  	if (DeviceRangeStatusInternal!=11) return 2000;
 
   return range;
 }
@@ -1129,6 +1173,13 @@ bool vl53l0xPerformSingleRefCalibration(uint8_t vhv_init_byte)
   return true;
 }
 
+uint8_t vl53l0xReadReg8Bit(uint8_t reg)
+{
+	uint8_t buffer = 0;
+	i2cdevRead(I2Cx, devAddr, reg, 1, &buffer);
+	return buffer;
+}
+
 uint16_t vl53l0xReadReg16Bit(uint8_t reg)
 {
   uint8_t buffer[2] = {};
@@ -1155,10 +1206,10 @@ bool vl53l0xWriteReg32Bit(uint8_t reg, uint32_t val)
 }
 
 static const DeckDriver vl53l0x_deck = {
-  .vid = 0xBC,
-  .pid = 0x09,
-  .name = "bcZRanger",
-  .usedGpio = 0x0C,
+  .vid = 0,
+  .pid = 0,
+  .name = "vl53l0x",
+  .usedGpio = DECK_GPIO_IO1 | DECK_GPIO_IO2 | DECK_GPIO_IO3 | DECK_GPIO_IO4,
 
   .init = vl53l0xInit,
   .test = vl53l0xTest,
@@ -1168,4 +1219,11 @@ DECK_DRIVER(vl53l0x_deck);
 
 LOG_GROUP_START(range)
 LOG_ADD(LOG_UINT16, range, &range_last)
+LOG_ADD(LOG_UINT16, range1, &range_last2[0])
+LOG_ADD(LOG_UINT16, range2, &range_last2[1])
+LOG_ADD(LOG_UINT16, range3, &range_last2[2])
+LOG_ADD(LOG_UINT16, range4, &range_last2[3])
+LOG_ADD(LOG_UINT16, range5, &range_last2[4])
+LOG_ADD(LOG_UINT16, range6, &range_last2[5])
+LOG_ADD(LOG_UINT8, rangeStatus, &DeviceRangeStatusInternal)
 LOG_GROUP_STOP(range)
