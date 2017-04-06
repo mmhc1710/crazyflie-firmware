@@ -23,25 +23,15 @@
  *
  */
 
-#ifndef _EXT_POSITION_H_
-#define _EXT_POSITION_H_
+#ifndef CRTP_COMMANDER_H_
+#define CRTP_COMMANDER_H_
 
+#include <stdint.h>
 #include "stabilizer_types.h"
+#include "crtp.h"
 
-/**
- * CRTP external position data struct
- */
-struct CrtpExtPosition
-{
-  float x; // in m
-  float y; // in m
-  float z; // in m
-} __attribute__((packed));
+void crtpCommanderInit(void);
+void crtpCommanderRpytDecodeSetpoint(setpoint_t *setpoint, CRTPPacket *pk);
+void crtpCommanderGenericDecodeSetpoint(setpoint_t *setpoint, CRTPPacket *pk);
 
-// Set up the callback for the CRTP_PORT_POSITION
-void extPositionInit(void);
-
-// Get the current position from the cache
-bool getExtPosition(state_t *state);
-
-#endif /* _EXT_POSITION_H_ */
+#endif /* CRTP_COMMANDER_H_ */

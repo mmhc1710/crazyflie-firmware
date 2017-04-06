@@ -79,7 +79,6 @@ typedef struct quaternion_s {
 typedef struct tdoaMeasurement_s {
   point_t anchorPosition[2];
   float distanceDiff;
-  float timeBetweenMeasurements;
   float stdDev;
 } tdoaMeasurement_t;
 
@@ -114,11 +113,17 @@ typedef struct distanceMeasurement_s {
   float stdDev;
 } distanceMeasurement_t;
 
+typedef struct zDistance_s {
+  uint32_t timestamp;
+  float distance;
+} zDistance_t;
+
 typedef struct sensorData_s {
   Axis3f acc;
   Axis3f gyro;
   Axis3f mag;
   baro_t baro;
+  zDistance_t zrange;
   point_t position;
 } sensorData_t;
 
@@ -144,6 +149,8 @@ typedef enum mode_e {
 } mode_t;
 
 typedef struct setpoint_s {
+  uint32_t timestamp;
+
   attitude_t attitude;
   attitude_t attitudeRate;
   float thrust;

@@ -24,15 +24,14 @@
  *
  * and
  *
- * "Kalman filtering with an attitude" as published in the PhD thesis "Increased autonomy for quadrocopter systems: trajectory generation, fail-safe strategies, and state estimation"
- * http://dx.doi.org/10.3929/ethz-a-010655275
- * TODO: Update the above reference once the paper has been published
+ * "Covariance Correction Step for Kalman Filtering with an Attitude"
+ * http://arc.aiaa.org/doi/abs/10.2514/1.G000848
  *
  * Academic citation would be appreciated.
  *
  * BIBTEX ENTRIES:
-      @INPROCEEDINGS{MuellerHamer2015,
-      author  = {Mueller, M. W. and Hamer, M. and D'Andrea, R.},
+      @INPROCEEDINGS{MuellerHamerUWB2015,
+      author  = {Mueller, Mark W and Hamer, Michael and D’Andrea, Raffaello},
       title   = {Fusing ultra-wideband range measurements with accelerometers and rate gyroscopes for quadrocopter state estimation},
       booktitle = {2015 IEEE International Conference on Robotics and Automation (ICRA)},
       year    = {2015},
@@ -41,12 +40,13 @@
       doi     = {10.1109/ICRA.2015.7139421},
       ISSN    = {1050-4729}}
 
-      @PHDTHESIS {Mueller2016,
-      author  = {Mueller, M. W.},
-      title   = {Increased autonomy for quadrocopter systems: trajectory generation, fail-safe strategies, and state-estimation},
-      school  = {ETH Zurich},
-      year    = {2016},
-      doi     = {10.3929/ethz-a-010655275}}
+      @ARTICLE{MuellerCovariance2016,
+      author={Mueller, Mark W and Hehn, Markus and D’Andrea, Raffaello},
+      title={Covariance Correction Step for Kalman Filtering with an Attitude},
+      journal={Journal of Guidance, Control, and Dynamics},
+      pages={1--7},
+      year={2016},
+      publisher={American Institute of Aeronautics and Astronautics}}
  *
  * ============================================================================
  *
@@ -316,6 +316,22 @@ static void stateEstimatorAssertNotNaN()
 }
 #endif
 
+#ifdef KALMAN_DECOUPLE_XY
+// Reset a state to 0 with max covariance
+// If called often, this decouples the state to the rest of the filter
+static void decoupleState(stateIdx_t state)
+{
+  // Set all covariance to 0
+  for(int i=0; i<STATE_DIM; i++) {
+    P[state][i] = 0;
+    P[i][state] = 0;
+  }
+  // Set state variance to maximum
+  P[state][state] = MAX_COVARIANCE;
+  // set state to zero
+  S[state] = 0;
+}
+#endif
 
 // --------------------------------------------------
 
@@ -329,6 +345,14 @@ void stateEstimatorUpdate(state_t *state, sensorData_t *sensors, control_t *cont
   bool doneUpdate = false;
 
   uint32_t tick = xTaskGetTickCount(); // would be nice if this had a precision higher than 1ms...
+
+#ifdef KALMAN_DECOUPLE_XY
+  // Decouple position states
+  decoupleState(STATE_X);
+  decoupleState(STATE_PX);
+  decoupleState(STATE_Y);
+  decoupleState(STATE_PY);
+#endif
 
   // Average the last IMU measurements. We do this because the prediction loop is
   // slower than the IMU loop, but the IMU information is required externally at
@@ -592,8 +616,8 @@ static void stateEstimatorPredict(float cmdThrust, Axis3f *acc, Axis3f *gyro, fl
    * where d is the attitude error expressed as Rodriges parameters, ie. d0 = 1/2*gyro.x*dt under the assumption that
    * d = [0,0,0] at the beginning of each prediction step and that gyro.x is constant over the sampling period
    *
-   * As derived in the following paper:
-   * TODO: Once it is published, cite the paper Müller, Hehn and D'Andrea, "Kalman Filtering with an Attitude".
+   * As derived in "Covariance Correction Step for Kalman Filtering with an Attitude"
+   * http://arc.aiaa.org/doi/abs/10.2514/1.G000848
    */
   float d0 = gyro->x*dt/2;
   float d1 = gyro->y*dt/2;
@@ -659,9 +683,9 @@ static void stateEstimatorPredict(float cmdThrust, Axis3f *acc, Axis3f *gyro, fl
     tmpSPY = S[STATE_PY];
     tmpSPZ = S[STATE_PZ];
 
-    // body-velocity update: accelerometers + gyros cross velocity - gravity in body frame
+    // body-velocity update: accelerometers - gyros cross velocity - gravity in body frame
     S[STATE_PX] += dt * (gyro->z * tmpSPY - gyro->y * tmpSPZ - GRAVITY_MAGNITUDE * R[2][0]);
-    S[STATE_PY] += dt * (gyro->z * tmpSPX + gyro->x * tmpSPZ - GRAVITY_MAGNITUDE * R[2][1]);
+    S[STATE_PY] += dt * (-gyro->z * tmpSPX + gyro->x * tmpSPZ - GRAVITY_MAGNITUDE * R[2][1]);
     S[STATE_PZ] += dt * (zacc + gyro->y * tmpSPX - gyro->x * tmpSPY - GRAVITY_MAGNITUDE * R[2][2]);
   }
   else // Acceleration can be in any direction, as measured by the accelerometer. This occurs, eg. in freefall or while being carried.
@@ -681,9 +705,9 @@ static void stateEstimatorPredict(float cmdThrust, Axis3f *acc, Axis3f *gyro, fl
     tmpSPY = S[STATE_PY];
     tmpSPZ = S[STATE_PZ];
 
-    // body-velocity update: accelerometers + gyros cross velocity - gravity in body frame
+    // body-velocity update: accelerometers - gyros cross velocity - gravity in body frame
     S[STATE_PX] += dt * (acc->x + gyro->z * tmpSPY - gyro->y * tmpSPZ - GRAVITY_MAGNITUDE * R[2][0]);
-    S[STATE_PY] += dt * (acc->y + gyro->z * tmpSPX + gyro->x * tmpSPZ - GRAVITY_MAGNITUDE * R[2][1]);
+    S[STATE_PY] += dt * (acc->y - gyro->z * tmpSPX + gyro->x * tmpSPZ - GRAVITY_MAGNITUDE * R[2][1]);
     S[STATE_PZ] += dt * (acc->z + gyro->y * tmpSPX - gyro->x * tmpSPY - GRAVITY_MAGNITUDE * R[2][2]);
   }
 
@@ -944,18 +968,13 @@ static void stateEstimatorUpdateWithTof(tofMeasurement_t *tof)
 
   // Only update the filter if the measurement is reliable (\hat{h} -> infty when R[2][2] -> 0)
   if (fabs(R[2][2]) > 0.1 && R[2][2] > 0){
-    float angleOfApterure = 10 * DEG_TO_RAD; // Half aperture angle radians
-    float alpha = acosf(R[2][2]) - angleOfApterure;
-    if (alpha < 0.0f){
-      alpha = 0.0f;
-    }
-    float predictedDistance = S[STATE_Z] / cosf(alpha);
+    float predictedDistance = S[STATE_Z] / R[2][2];
     float measuredDistance = tof->distance; // [m]
 
     //Measurement equation
     //
     // h = z/((R*z_b)\dot z_b) = z/cos(alpha)
-    h[STATE_Z] = 1 / cosf(alpha);
+    h[STATE_Z] = 1 / R[2][2];
 
     // Scalar update
     stateEstimatorScalarUpdate(&H, measuredDistance-predictedDistance, tof->stdDev);
@@ -1008,8 +1027,8 @@ static void stateEstimatorFinalize(sensorData_t *sensors, uint32_t tick)
      *            ~ (I + [[-d]] + [[-d]]^2 / 2) Sigma_pre (I + [[-d]] + [[-d]]^2 / 2)'
      * where d is the attitude error expressed as Rodriges parameters, ie. d = tan(|v|/2)*v/|v|
      *
-     * As derived in the following paper:
-     * TODO: Once it is published, cite the paper Müller, Hehn and D'Andrea, "Kalman Filtering with an Attitude".
+     * As derived in "Covariance Correction Step for Kalman Filtering with an Attitude"
+     * http://arc.aiaa.org/doi/abs/10.2514/1.G000848
      */
 
     float d0 = v0/2; // the attitude error vector (v0,v1,v2) is small,

@@ -59,7 +59,7 @@
 #define SENSORS_READ_RATE_HZ      1000
 #define SENSORS_STARTUP_TIME_MS   1000
 
-#define SENSORS_BMI160_G_CFG             2
+#define SENSORS_BMI160_G_CFG             16
 #define SENSORS_BMI160_G_PER_LSB_CFG     (2.0f * SENSORS_BMI160_G_CFG) / 65536.0f
 #define SENSORS_BMI160_DEG_PER_LSB_CFG   (2.0f * 2000.0f) / 65536.0f
 #define SENSORS_1G_RAW            (int16_t)(1.0f / (float)((2.0f * SENSORS_BMI160_G_CFG) / 65536.0f))
@@ -67,7 +67,10 @@
 #define SENSORS_BMI055_1G_PER_LSB_CFG   (2.0f * 8.0f / (4096))
 #define SENSORS_BMI055_1G_IN_LSB		    (int16_t)(1.0f / SENSORS_BMI055_1G_PER_LSB_CFG)
 
-#define SENSORS_VARIANCE_MAN_TEST_TIMEOUT M2T(1000) // Timeout in ms#define SENSORS_MAN_TEST_LEVEL_MAX        5.0f      // Max degrees off#define GYRO_NBR_OF_AXES            3
+#define SENSORS_VARIANCE_MAN_TEST_TIMEOUT M2T(1000) // Timeout in ms
+#define SENSORS_MAN_TEST_LEVEL_MAX        5.0f      // Max degrees off
+
+#define GYRO_NBR_OF_AXES            3
 #define GYRO_MIN_BIAS_TIMEOUT_MS    M2T(1*1000)
 
 #define SENSORS_TAKE_ACCEL_BIAS
@@ -432,11 +435,11 @@ static void sensorsRead(Axis3f* gyroOut, Axis3f* accOut)
       bmg160_get_data_XYZ(&bmi055gyr);
       // re-align the axes
       accelBmi055.x = bmi055acc.x;
-      accelBmi055.y = -bmi055acc.y;
-      accelBmi055.z = -bmi055acc.z;
+      accelBmi055.y = bmi055acc.y;
+      accelBmi055.z = bmi055acc.z;
       gyroBmi055.x = bmi055gyr.x;
-      gyroBmi055.y = -bmi055gyr.y;
-      gyroBmi055.z = -bmi055gyr.z;
+      gyroBmi055.y = bmi055gyr.y;
+      gyroBmi055.z = bmi055gyr.z;
     }
 #endif
       break;
@@ -448,11 +451,11 @@ static void sensorsRead(Axis3f* gyroOut, Axis3f* accOut)
       bmi160_get_sensor_data(BMI160_BOTH_ACCEL_AND_GYRO, &bmi160acc, &bmi160gyr, &bmi160Dev);
       // re-align the axes
       accelBmi160.x = bmi160acc.x;
-      accelBmi160.y = -bmi160acc.y;
-      accelBmi160.z = -bmi160acc.z;
+      accelBmi160.y = bmi160acc.y;
+      accelBmi160.z = bmi160acc.z;
       gyroBmi160.x = bmi160gyr.x;
-      gyroBmi160.y = -bmi160gyr.y;
-      gyroBmi160.z = -bmi160gyr.z;
+      gyroBmi160.y = bmi160gyr.y;
+      gyroBmi160.z = bmi160gyr.z;
     }
 #endif
       break;
@@ -565,6 +568,9 @@ bool sensorsIsCalibrated(void)
 #ifdef SENSORS_TAKE_ACCEL_BIAS
       status &= accelBiasBmi055.isBiasValueFound;
 #endif
+      break;
+    default:
+      status = false;
       break;
   }
 
@@ -717,3 +723,6 @@ static void sensorsAccAlignToGravity(Axis3f* in, Axis3f* out)
   out->z = ry.z;
 }
 
+PARAM_GROUP_START(imu_sensors)
+PARAM_ADD(PARAM_UINT8, BoschIMUSelect, &usedImuType)
+PARAM_GROUP_STOP(imu_sensors)

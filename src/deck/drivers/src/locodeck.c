@@ -39,6 +39,7 @@
 #include "FreeRTOS.h"
 #include "semphr.h"
 #include "task.h"
+#include "queue.h"
 
 #include "deck.h"
 #include "system.h"
@@ -69,7 +70,7 @@
 
 // The anchor position can be set using parameters
 // As an option you can set a static position in this file and set
-// anchorPositionOk to enable sending the anchor rangings to the Kalman filter
+// combinedAnchorPositionOk to enable sending the anchor rangings to the Kalman filter
 
 static lpsAlgoOptions_t algoOptions = {
   .tagAddress = 0xbccf000000000008,
@@ -84,20 +85,26 @@ static lpsAlgoOptions_t algoOptions = {
   .antennaDelay = (ANTENNA_OFFSET*499.2e6*128)/299792458.0, // In radio tick
   .rangingFailedThreshold = 6,
 
-  .anchorPositionOk = false,
+  .combinedAnchorPositionOk = false,
 
   // To set a static anchor position from startup, uncomment and modify the
   // following code:
-  // .anchorPosition = {
-  //   {x: 0.99, y: 1.49, z: 1.80},
-  //   {x: 0.99, y: 3.29, z: 1.80},
-  //   {x: 4.67, y: 2.54, z: 1.80},
-  //   {x: 0.59, y: 2.27, z: 0.20},
-  //   {x: 4.70, y: 3.38, z: 0.20},
-  //   {x: 4.70, y: 1.14, z: 0.20},
-  // },
-  // .anchorPositionOk = true,
+//   .anchorPosition = {
+//     {timestamp: 1, x: 0.99, y: 1.49, z: 1.80},
+//     {timestamp: 1, x: 0.99, y: 3.29, z: 1.80},
+//     {timestamp: 1, x: 4.67, y: 2.54, z: 1.80},
+//     {timestamp: 1, x: 0.59, y: 2.27, z: 0.20},
+//     {timestamp: 1, x: 4.70, y: 3.38, z: 0.20},
+//     {timestamp: 1, x: 4.70, y: 1.14, z: 0.20},
+//   },
+//
+//   .combinedAnchorPositionOk = true,
 };
+
+point_t* locodeckGetAnchorPosition(uint8_t anchor)
+{
+  return &algoOptions.anchorPosition[anchor];
+}
 
 #if LPS_TDOA_ENABLE
 static uwbAlgorithm_t *algorithm = &uwbTdoaTagAlgorithm;
@@ -110,6 +117,8 @@ static xSemaphoreHandle spiSemaphore;
 static SemaphoreHandle_t irqSemaphore;
 static dwDevice_t dwm_device;
 static dwDevice_t *dwm = &dwm_device;
+
+static QueueHandle_t lppShortQueue;
 
 static uint32_t timeout;
 
@@ -134,6 +143,8 @@ static void rxTimeoutCallback(dwDevice_t * dev) {
 
 static void uwbTask(void* parameters)
 {
+  lppShortQueue = xQueueCreate(10, sizeof(lpsLppShortPacket_t));
+
   systemWaitStart();
 
   algorithm->init(dwm, &algoOptions);
@@ -147,6 +158,28 @@ static void uwbTask(void* parameters)
       timeout = algorithm->onEvent(dwm, eventTimeout);
     }
   }
+}
+
+static lpsLppShortPacket_t lppShortPacket;
+
+bool lpsSendLppShort(uint8_t destId, void* data, size_t length)
+{
+  bool result = false;
+
+  if (isInit)
+  {
+    lppShortPacket.dest = destId;
+    lppShortPacket.length = length;
+    memcpy(lppShortPacket.data, data, length);
+    result = xQueueSend(lppShortQueue, &lppShortPacket,0) == pdPASS;
+  }
+
+  return result;
+}
+
+bool lpsGetLppShort(lpsLppShortPacket_t* shortPacket)
+{
+  return xQueueReceive(lppShortQueue, shortPacket, 0) == pdPASS;
 }
 
 static uint8_t spiTxBuffer[196];
@@ -286,7 +319,8 @@ static void dwm1000Init(DeckInfo *info)
   dwNewConfiguration(dwm);
   dwSetDefaults(dwm);
   dwEnableMode(dwm, MODE_SHORTDATA_FAST_ACCURACY);
-  dwSetChannel(dwm, CHANNEL_3);
+  dwSetChannel(dwm, CHANNEL_2);
+  dwUseSmartPower(dwm, true);
   dwSetPreambleCode(dwm, PREAMBLE_CODE_64MHZ_9);
 
   dwSetReceiveWaitTimeout(dwm, RX_TIMEOUT);
@@ -331,43 +365,115 @@ static const DeckDriver dwm1000_deck = {
 DECK_DRIVER(dwm1000_deck);
 
 LOG_GROUP_START(ranging)
-LOG_ADD(LOG_FLOAT, distance1, &algoOptions.distance[0])
-LOG_ADD(LOG_FLOAT, distance2, &algoOptions.distance[1])
-LOG_ADD(LOG_FLOAT, distance3, &algoOptions.distance[2])
-LOG_ADD(LOG_FLOAT, distance4, &algoOptions.distance[3])
-LOG_ADD(LOG_FLOAT, distance5, &algoOptions.distance[4])
-LOG_ADD(LOG_FLOAT, distance6, &algoOptions.distance[5])
-LOG_ADD(LOG_FLOAT, distance7, &algoOptions.distance[6])
-LOG_ADD(LOG_FLOAT, distance8, &algoOptions.distance[7])
-LOG_ADD(LOG_FLOAT, pressure1, &algoOptions.pressures[0])
-LOG_ADD(LOG_FLOAT, pressure2, &algoOptions.pressures[1])
-LOG_ADD(LOG_FLOAT, pressure3, &algoOptions.pressures[2])
-LOG_ADD(LOG_FLOAT, pressure4, &algoOptions.pressures[3])
-LOG_ADD(LOG_FLOAT, pressure5, &algoOptions.pressures[4])
-LOG_ADD(LOG_FLOAT, pressure6, &algoOptions.pressures[5])
-LOG_ADD(LOG_FLOAT, pressure7, &algoOptions.pressures[6])
-LOG_ADD(LOG_FLOAT, pressure8, &algoOptions.pressures[7])
+#if (LOCODECK_NR_OF_ANCHORS > 0)
+LOG_ADD(LOG_FLOAT, distance0, &algoOptions.distance[0])
+#endif
+#if (LOCODECK_NR_OF_ANCHORS > 1)
+LOG_ADD(LOG_FLOAT, distance1, &algoOptions.distance[1])
+#endif
+#if (LOCODECK_NR_OF_ANCHORS > 2)
+LOG_ADD(LOG_FLOAT, distance2, &algoOptions.distance[2])
+#endif
+#if (LOCODECK_NR_OF_ANCHORS > 3)
+LOG_ADD(LOG_FLOAT, distance3, &algoOptions.distance[3])
+#endif
+#if (LOCODECK_NR_OF_ANCHORS > 4)
+LOG_ADD(LOG_FLOAT, distance4, &algoOptions.distance[4])
+#endif
+#if (LOCODECK_NR_OF_ANCHORS > 5)
+LOG_ADD(LOG_FLOAT, distance5, &algoOptions.distance[5])
+#endif
+#if (LOCODECK_NR_OF_ANCHORS > 6)
+LOG_ADD(LOG_FLOAT, distance6, &algoOptions.distance[6])
+#endif
+#if (LOCODECK_NR_OF_ANCHORS > 7)
+LOG_ADD(LOG_FLOAT, distance7, &algoOptions.distance[7])
+#endif
+#if (LOCODECK_NR_OF_ANCHORS > 0)
+LOG_ADD(LOG_FLOAT, pressure0, &algoOptions.pressures[0])
+#endif
+#if (LOCODECK_NR_OF_ANCHORS > 1)
+LOG_ADD(LOG_FLOAT, pressure1, &algoOptions.pressures[1])
+#endif
+#if (LOCODECK_NR_OF_ANCHORS > 2)
+LOG_ADD(LOG_FLOAT, pressure2, &algoOptions.pressures[2])
+#endif
+#if (LOCODECK_NR_OF_ANCHORS > 3)
+LOG_ADD(LOG_FLOAT, pressure3, &algoOptions.pressures[3])
+#endif
+#if (LOCODECK_NR_OF_ANCHORS > 4)
+LOG_ADD(LOG_FLOAT, pressure4, &algoOptions.pressures[4])
+#endif
+#if (LOCODECK_NR_OF_ANCHORS > 5)
+LOG_ADD(LOG_FLOAT, pressure5, &algoOptions.pressures[5])
+#endif
+#if (LOCODECK_NR_OF_ANCHORS > 6)
+LOG_ADD(LOG_FLOAT, pressure6, &algoOptions.pressures[6])
+#endif
+#if (LOCODECK_NR_OF_ANCHORS > 7)
+LOG_ADD(LOG_FLOAT, pressure7, &algoOptions.pressures[7])
+#endif
 LOG_ADD(LOG_UINT16, state, &algoOptions.rangingState)
 LOG_GROUP_STOP(ranging)
 
 PARAM_GROUP_START(anchorpos)
+#if (LOCODECK_NR_OF_ANCHORS > 0)
 PARAM_ADD(PARAM_FLOAT, anchor0x, &algoOptions.anchorPosition[0].x)
 PARAM_ADD(PARAM_FLOAT, anchor0y, &algoOptions.anchorPosition[0].y)
 PARAM_ADD(PARAM_FLOAT, anchor0z, &algoOptions.anchorPosition[0].z)
+#endif
+#if (LOCODECK_NR_OF_ANCHORS > 1)
 PARAM_ADD(PARAM_FLOAT, anchor1x, &algoOptions.anchorPosition[1].x)
 PARAM_ADD(PARAM_FLOAT, anchor1y, &algoOptions.anchorPosition[1].y)
 PARAM_ADD(PARAM_FLOAT, anchor1z, &algoOptions.anchorPosition[1].z)
+#endif
+#if (LOCODECK_NR_OF_ANCHORS > 2)
 PARAM_ADD(PARAM_FLOAT, anchor2x, &algoOptions.anchorPosition[2].x)
 PARAM_ADD(PARAM_FLOAT, anchor2y, &algoOptions.anchorPosition[2].y)
 PARAM_ADD(PARAM_FLOAT, anchor2z, &algoOptions.anchorPosition[2].z)
+#endif
+#if (LOCODECK_NR_OF_ANCHORS > 3)
 PARAM_ADD(PARAM_FLOAT, anchor3x, &algoOptions.anchorPosition[3].x)
 PARAM_ADD(PARAM_FLOAT, anchor3y, &algoOptions.anchorPosition[3].y)
 PARAM_ADD(PARAM_FLOAT, anchor3z, &algoOptions.anchorPosition[3].z)
+#endif
+#if (LOCODECK_NR_OF_ANCHORS > 4)
 PARAM_ADD(PARAM_FLOAT, anchor4x, &algoOptions.anchorPosition[4].x)
 PARAM_ADD(PARAM_FLOAT, anchor4y, &algoOptions.anchorPosition[4].y)
 PARAM_ADD(PARAM_FLOAT, anchor4z, &algoOptions.anchorPosition[4].z)
+#endif
+#if (LOCODECK_NR_OF_ANCHORS > 5)
 PARAM_ADD(PARAM_FLOAT, anchor5x, &algoOptions.anchorPosition[5].x)
 PARAM_ADD(PARAM_FLOAT, anchor5y, &algoOptions.anchorPosition[5].y)
 PARAM_ADD(PARAM_FLOAT, anchor5z, &algoOptions.anchorPosition[5].z)
-PARAM_ADD(PARAM_UINT8, enable, &algoOptions.anchorPositionOk)
+#endif
+#if (LOCODECK_NR_OF_ANCHORS > 6)
+PARAM_ADD(PARAM_FLOAT, anchor6x, &algoOptions.anchorPosition[6].x)
+PARAM_ADD(PARAM_FLOAT, anchor6y, &algoOptions.anchorPosition[6].y)
+PARAM_ADD(PARAM_FLOAT, anchor6z, &algoOptions.anchorPosition[6].z)
+#endif
+#if (LOCODECK_NR_OF_ANCHORS > 7)
+PARAM_ADD(PARAM_FLOAT, anchor7x, &algoOptions.anchorPosition[7].x)
+PARAM_ADD(PARAM_FLOAT, anchor7y, &algoOptions.anchorPosition[7].y)
+PARAM_ADD(PARAM_FLOAT, anchor7z, &algoOptions.anchorPosition[7].z)
+#endif
+PARAM_ADD(PARAM_UINT8, enable, &algoOptions.combinedAnchorPositionOk)
 PARAM_GROUP_STOP(anchorpos)
+
+
+// Loco Posisioning Protocol (LPP) handling
+
+void lpsHandleLppShortPacket(uint8_t srcId, uint8_t *data, int length)
+{
+  uint8_t type = data[0];
+
+  if (type == LPP_SHORT_ANCHORPOS) {
+    if (srcId < LOCODECK_NR_OF_ANCHORS) {
+      struct lppShortAnchorPos_s *newpos = (struct lppShortAnchorPos_s*)&data[1];
+      algoOptions.anchorPosition[srcId].timestamp = xTaskGetTickCount();
+      algoOptions.anchorPosition[srcId].x = newpos->x;
+      algoOptions.anchorPosition[srcId].y = newpos->y;
+      algoOptions.anchorPosition[srcId].z = newpos->z;
+    }
+  }
+}
