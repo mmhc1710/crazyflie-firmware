@@ -183,15 +183,15 @@ bool vl53l0xTest(void)
   		if (testStatus) DEBUG_PRINT("[%d] Initialization test [OK]\n", i+1);
   	}
 
-  	//	digitalWrite(DECK_GPIO_IO4, HIGH);
-  	//	digitalWrite(DECK_GPIO_IO1, LOW);
-  	//	digitalWrite(DECK_GPIO_IO2, LOW);
-  	//	digitalWrite(DECK_GPIO_IO3, LOW);
-  	//
-  	//	testStatus  = vl53l0xTestConnection();
-  	//	//	if (testStatus) DEBUG_PRINT("[%d] Connection test [OK]\n", 6);
-  	//	testStatus &= vl53l0xInitSensor(true);
-  	//	if (testStatus) DEBUG_PRINT("[%d] Initialization test [OK]\n", 6);
+  		digitalWrite(DECK_GPIO_IO4, HIGH);
+  		digitalWrite(DECK_GPIO_IO1, LOW);
+  		digitalWrite(DECK_GPIO_IO2, LOW);
+  		digitalWrite(DECK_GPIO_IO3, LOW);
+
+  		testStatus  = vl53l0xTestConnection();
+  		//	if (testStatus) DEBUG_PRINT("[%d] Connection test [OK]\n", 6);
+  		testStatus &= vl53l0xInitSensor(true);
+  		if (testStatus) DEBUG_PRINT("[%d] Initialization test [OK]\n", 6);
 
   return testStatus;
 }
@@ -215,13 +215,13 @@ void vl53l0xTask(void* arg)
     			range_last2[i] = vl53l0xReadRangeSingleMillimeters();
     			//  	  range_last = vl53l0xReadRangeContinuousMillimeters();
     		}
-    //		digitalWrite(DECK_GPIO_IO4, HIGH);
-    //		digitalWrite(DECK_GPIO_IO1, LOW);
-    //		digitalWrite(DECK_GPIO_IO2, LOW);
-    //		digitalWrite(DECK_GPIO_IO3, LOW);
-    //		range_last2[5] = vl53l0xReadRangeSingleMillimeters();
-    //		//  	  range_last = vl53l0xReadRangeContinuousMillimeters();
-    		range_last = range_last2[0];
+    		digitalWrite(DECK_GPIO_IO4, HIGH);
+    		digitalWrite(DECK_GPIO_IO1, LOW);
+    		digitalWrite(DECK_GPIO_IO2, LOW);
+    		digitalWrite(DECK_GPIO_IO3, LOW);
+    		range_last2[5] = vl53l0xReadRangeSingleMillimeters();
+    		//  	  range_last = vl53l0xReadRangeContinuousMillimeters();
+    		range_last = range_last2[5];
 #if defined(ESTIMATOR_TYPE_kalman) && defined(UPDATE_KALMAN_WITH_RANGING)
     // check if range is feasible and push into the kalman filter
     // the sensor should not be able to measure >3 [m], and outliers typically
