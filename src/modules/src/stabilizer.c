@@ -56,38 +56,39 @@ static state_t state;
 static control_t control;
 
 extern uint16_t range_last2[6];
-
+static uint8_t Linear = 1, nonLinear = 0;
+static float LinearConst = 2.0, nonLinearConst = 0.5;
 static void stabilizerTask(void* param);
 
 void stabilizerInit(void)
 {
-  if(isInit)
-    return;
+	if(isInit)
+		return;
 
-  sensorsInit();
-  stateEstimatorInit();
-  stateControllerInit();
-  powerDistributionInit();
+	sensorsInit();
+	stateEstimatorInit();
+	stateControllerInit();
+	powerDistributionInit();
 #if defined(SITAW_ENABLED)
-  sitAwInit();
+	sitAwInit();
 #endif
 
-  xTaskCreate(stabilizerTask, STABILIZER_TASK_NAME,
-              STABILIZER_TASK_STACKSIZE, NULL, STABILIZER_TASK_PRI, NULL);
+	xTaskCreate(stabilizerTask, STABILIZER_TASK_NAME,
+			STABILIZER_TASK_STACKSIZE, NULL, STABILIZER_TASK_PRI, NULL);
 
-  isInit = true;
+	isInit = true;
 }
 
 bool stabilizerTest(void)
 {
-  bool pass = true;
+	bool pass = true;
 
-  pass &= sensorsTest();
-  pass &= stateEstimatorTest();
-  pass &= stateControllerTest();
-  pass &= powerDistributionTest();
+	pass &= sensorsTest();
+	pass &= stateEstimatorTest();
+	pass &= stateControllerTest();
+	pass &= powerDistributionTest();
 
-  return pass;
+	return pass;
 }
 
 /* The stabilizer loop runs at 1kHz (stock) or 500Hz (kalman). It is the
@@ -97,58 +98,82 @@ bool stabilizerTest(void)
 
 static void stabilizerTask(void* param)
 {
-  uint32_t tick = 0;
-  uint32_t lastWakeTime;
-  vTaskSetApplicationTaskTag(0, (void*)TASK_STABILIZER_ID_NBR);
+	uint32_t tick = 0;
+	uint32_t lastWakeTime;
+	vTaskSetApplicationTaskTag(0, (void*)TASK_STABILIZER_ID_NBR);
 
-  //Wait for the system to be fully started to start stabilization loop
-  systemWaitStart();
+	//Wait for the system to be fully started to start stabilization loop
+	systemWaitStart();
 
-  // Wait for sensors to be calibrated
-  lastWakeTime = xTaskGetTickCount ();
-  while(!sensorsAreCalibrated()) {
-    vTaskDelayUntil(&lastWakeTime, F2T(RATE_MAIN_LOOP));
-  }
+	// Wait for sensors to be calibrated
+	lastWakeTime = xTaskGetTickCount ();
+	while(!sensorsAreCalibrated()) {
+		vTaskDelayUntil(&lastWakeTime, F2T(RATE_MAIN_LOOP));
+	}
 
-  while(1) {
-    vTaskDelayUntil(&lastWakeTime, F2T(RATE_MAIN_LOOP));
+	while(1) {
+		vTaskDelayUntil(&lastWakeTime, F2T(RATE_MAIN_LOOP));
 
-    getExtPosition(&state);
+		getExtPosition(&state);
 #ifdef ESTIMATOR_TYPE_kalman
-    stateEstimatorUpdate(&state, &sensorData, &control);
+		stateEstimatorUpdate(&state, &sensorData, &control);
 #else
-    sensorsAcquire(&sensorData, tick);
-    stateEstimator(&state, &sensorData, tick);
+		sensorsAcquire(&sensorData, tick);
+		stateEstimator(&state, &sensorData, tick);
 #endif
 
-    commanderGetSetpoint(&setpoint, &state);
-//    if (range_last2[1]<1000.0 && range_last2[1]>0.0) {
-//    	setpoint.attitude.roll -= (float)  (0.5*1000/range_last2[1]);
-//    	setpoint.attitude.pitch += (float) (0.5*1000/range_last2[1]);
-//    }
-//
-//    if (range_last2[2]<1000.0 && range_last2[2]>0.0) {
-//        	setpoint.attitude.roll += (float)  (0.5*1000/range_last2[2]);
-//        	setpoint.attitude.pitch -= (float) (0.5*1000/range_last2[2]);
-//        }
+		commanderGetSetpoint(&setpoint, &state);
+		if (nonLinear) {
+			if (range_last2[1]<1000.0 && range_last2[1]>0.0) {
+				setpoint.attitude.roll -= (float)  (nonLinearConst*1000/range_last2[1]);
+				setpoint.attitude.pitch += (float) (nonLinearConst*1000/range_last2[1]);
+			}
+			//
+			if (range_last2[2]<1000.0 && range_last2[2]>0.0) {
+				setpoint.attitude.roll -= (float)  (nonLinearConst*1000/range_last2[2]);
+				setpoint.attitude.pitch -= (float) (nonLinearConst*1000/range_last2[2]);
+			}
 
-    if (range_last2[3]<1000.0 && range_last2[3]>0.0) {
-        	setpoint.attitude.roll += (float)  (0.5*1000/range_last2[3]);
-        	setpoint.attitude.pitch -= (float) (0.5*1000/range_last2[3]);
-        }
+			if (range_last2[3]<1000.0 && range_last2[3]>0.0) {
+				setpoint.attitude.roll += (float)  (nonLinearConst*1000/range_last2[3]);
+				setpoint.attitude.pitch -= (float) (nonLinearConst*1000/range_last2[3]);
+			}
 
-//    if (range_last2[4]<1000.0 && range_last2[4]>0.0) {
-//        	setpoint.attitude.roll += (float)  (0.5*1000/range_last2[4]);
-//        	setpoint.attitude.pitch += (float) (0.5*1000/range_last2[4]);
-//        }
+			if (range_last2[4]<1000.0 && range_last2[4]>0.0) {
+				setpoint.attitude.roll += (float)  (nonLinearConst*1000/range_last2[4]);
+				setpoint.attitude.pitch += (float) (nonLinearConst*1000/range_last2[4]);
+			}
+		}
 
-    sitAwUpdateSetpoint(&setpoint, &sensorData, &state);
+		if (Linear) {
+			if (range_last2[1]<1000.0 && range_last2[1]>0.0) {
+				setpoint.attitude.roll -= LinearConst*(1 - range_last2[1]/1000);
+				setpoint.attitude.pitch += LinearConst*(1 - range_last2[1]/1000);
+			}
 
-    stateController(&control, &setpoint, &sensorData, &state, tick);
-    powerDistribution(&control);
+			if (range_last2[2]<1000.0 && range_last2[2]>0.0) {
+				setpoint.attitude.roll -= LinearConst*(1 - range_last2[2]/1000);
+				setpoint.attitude.pitch -= LinearConst*(1 - range_last2[2]/1000);
+			}
 
-    tick++;
-  }
+			if (range_last2[3]<1000.0 && range_last2[3]>0.0) {
+				setpoint.attitude.roll += LinearConst*(1 - range_last2[3]/1000);
+				setpoint.attitude.pitch -= LinearConst*(1 - range_last2[3]/1000);
+			}
+
+			if (range_last2[4]<1000.0 && range_last2[4]>0.0) {
+				setpoint.attitude.roll += LinearConst*(1 - range_last2[4]/1000);
+				setpoint.attitude.pitch += LinearConst*(1 - range_last2[4]/1000);
+			}
+		}
+
+		sitAwUpdateSetpoint(&setpoint, &sensorData, &state);
+
+		stateController(&control, &setpoint, &sensorData, &state, tick);
+		powerDistribution(&control);
+
+		tick++;
+	}
 }
 
 LOG_GROUP_START(ctrltarget)
@@ -202,3 +227,10 @@ LOG_ADD(LOG_UINT16, range5, &range_last2[4])
 LOG_ADD(LOG_UINT16, range6, &range_last2[5])
 //LOG_ADD(LOG_UINT8, rangeStatus, &DeviceRangeStatusInternal)
 LOG_GROUP_STOP(range)
+
+PARAM_GROUP_START(posCtlPid)
+PARAM_ADD(PARAM_UINT8, Linear, &Linear)
+PARAM_ADD(PARAM_FLOAT, LinearConst, &LinearConst)
+PARAM_ADD(PARAM_UINT8, nonLinear, &nonLinear)
+PARAM_ADD(PARAM_FLOAT, nonLinearConst, &nonLinearConst)
+PARAM_GROUP_STOP(posCtlPid)
