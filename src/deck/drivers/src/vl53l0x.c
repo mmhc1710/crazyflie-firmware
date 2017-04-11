@@ -967,7 +967,7 @@ uint16_t vl53l0xReadRangeContinuousMillimeters(void)
 
   i2cdevWriteByte(I2Cx, devAddr, VL53L0X_RA_SYSTEM_INTERRUPT_CLEAR, 0x01);
   //  if ((DeviceRangeStatusInternal==6) || (DeviceRangeStatusInternal==9)) return 65535;
-//  	if (DeviceRangeStatusInternal!=11) return 2000;
+  	if (DeviceRangeStatusInternal!=11) return 2000;
 
   return range;
 }

@@ -56,7 +56,7 @@ static state_t state;
 static control_t control;
 
 extern uint16_t range_last2[6];
-static uint8_t Linear = 1, nonLinear = 0;
+static uint8_t Linear = 0, nonLinear = 1;
 static float LinearConst = 2.0, nonLinearConst = 0.5;
 static void stabilizerTask(void* param);
 
