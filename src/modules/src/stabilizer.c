@@ -55,6 +55,8 @@ static sensorData_t sensorData;
 static state_t state;
 static control_t control;
 
+extern uint16_t range_last2[6];
+
 static void stabilizerTask(void* param);
 
 void stabilizerInit(void)
@@ -120,6 +122,25 @@ static void stabilizerTask(void* param)
 #endif
 
     commanderGetSetpoint(&setpoint, &state);
+//    if (range_last2[1]<1000.0 && range_last2[1]>0.0) {
+//    	setpoint.attitude.roll -= (float)  (0.5*1000/range_last2[1]);
+//    	setpoint.attitude.pitch += (float) (0.5*1000/range_last2[1]);
+//    }
+//
+//    if (range_last2[2]<1000.0 && range_last2[2]>0.0) {
+//        	setpoint.attitude.roll += (float)  (0.5*1000/range_last2[2]);
+//        	setpoint.attitude.pitch -= (float) (0.5*1000/range_last2[2]);
+//        }
+
+    if (range_last2[3]<1000.0 && range_last2[3]>0.0) {
+        	setpoint.attitude.roll += (float)  (0.5*1000/range_last2[3]);
+        	setpoint.attitude.pitch -= (float) (0.5*1000/range_last2[3]);
+        }
+
+//    if (range_last2[4]<1000.0 && range_last2[4]>0.0) {
+//        	setpoint.attitude.roll += (float)  (0.5*1000/range_last2[4]);
+//        	setpoint.attitude.pitch += (float) (0.5*1000/range_last2[4]);
+//        }
 
     sitAwUpdateSetpoint(&setpoint, &sensorData, &state);
 
@@ -170,3 +191,14 @@ LOG_GROUP_STOP(mag)
 LOG_GROUP_START(controller)
 LOG_ADD(LOG_INT16, ctr_yaw, &control.yaw)
 LOG_GROUP_STOP(controller)
+
+LOG_GROUP_START(range)
+//LOG_ADD(LOG_UINT16, range, &range_last)
+LOG_ADD(LOG_UINT16, range1, &range_last2[0])
+LOG_ADD(LOG_UINT16, range2, &range_last2[1])
+LOG_ADD(LOG_UINT16, range3, &range_last2[2])
+LOG_ADD(LOG_UINT16, range4, &range_last2[3])
+LOG_ADD(LOG_UINT16, range5, &range_last2[4])
+LOG_ADD(LOG_UINT16, range6, &range_last2[5])
+//LOG_ADD(LOG_UINT8, rangeStatus, &DeviceRangeStatusInternal)
+LOG_GROUP_STOP(range)
