@@ -147,6 +147,7 @@ bool vl53l0xTest(void);
 void vl53l0xTask(void* arg);
 
 bool vl53l0xReadRange(zDistance_t* zrange, const uint32_t tick);
+bool vl53l0xReadPosition(point_t* position, const uint32_t tick);
 
 /** Verify the I2C connection.
  * Make sure the device is connected and responds as expected.

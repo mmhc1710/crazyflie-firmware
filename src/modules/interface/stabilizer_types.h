@@ -194,6 +194,7 @@ typedef struct tofMeasurement_s {
 #define RATE_100_HZ 100
 #define RATE_50_HZ 50
 #define RATE_25_HZ 25
+#define RATE_10_HZ 10
 
 #ifdef ESTIMATOR_TYPE_kalman
 #define RATE_MAIN_LOOP RATE_1000_HZ
@@ -202,7 +203,7 @@ typedef struct tofMeasurement_s {
 #endif
 
 #define ATTITUDE_RATE RATE_500_HZ
-#define POSITION_RATE RATE_100_HZ
+#define POSITION_RATE RATE_100_HZ//RATE_100_HZ
 
 #define RATE_DO_EXECUTE(RATE_HZ, TICK) ((TICK % (RATE_MAIN_LOOP / RATE_HZ)) == 0)
 

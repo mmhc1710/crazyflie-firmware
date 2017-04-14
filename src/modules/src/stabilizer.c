@@ -54,10 +54,11 @@ static setpoint_t setpoint;
 static sensorData_t sensorData;
 static state_t state;
 static control_t control;
-
-extern uint16_t range_last2[6];
-static uint8_t Linear = 0, nonLinear = 1;
-static float LinearConst = 2.0, nonLinearConst = 0.5;
+//
+//extern uint16_t range_last2[6];
+//static uint8_t Linear = 1, nonLinear = 0;
+//static float LinearConst = 2.0, nonLinearConst = 0.5;
+//static uint8_t centerSensor = 1;
 static void stabilizerTask(void* param);
 
 void stabilizerInit(void)
@@ -123,49 +124,115 @@ static void stabilizerTask(void* param)
 #endif
 
 		commanderGetSetpoint(&setpoint, &state);
-		if (nonLinear) {
-			if (range_last2[1]<1000.0 && range_last2[1]>0.0) {
-				setpoint.attitude.roll -= (float)  (nonLinearConst*1000/range_last2[1]);
-				setpoint.attitude.pitch += (float) (nonLinearConst*1000/range_last2[1]);
-			}
-			//
-			if (range_last2[2]<1000.0 && range_last2[2]>0.0) {
-				setpoint.attitude.roll -= (float)  (nonLinearConst*1000/range_last2[2]);
-				setpoint.attitude.pitch -= (float) (nonLinearConst*1000/range_last2[2]);
-			}
+		//		if (nonLinear && !centerSensor) {
+		//			if (range_last2[1]<1000.0 && range_last2[1]>0.0) {
+		//				setpoint.attitude.roll -= (float)  (nonLinearConst*1000/range_last2[1]);
+		//				setpoint.attitude.pitch += (float) (nonLinearConst*1000/range_last2[1]);
+		//			}
+		//			//
+		//			if (range_last2[2]<1000.0 && range_last2[2]>0.0) {
+		//				setpoint.attitude.roll -= (float)  (nonLinearConst*1000/range_last2[2]);
+		//				setpoint.attitude.pitch -= (float) (nonLinearConst*1000/range_last2[2]);
+		//			}
+		//
+		//			if (range_last2[3]<1000.0 && range_last2[3]>0.0) {
+		//				setpoint.attitude.roll += (float)  (nonLinearConst*1000/range_last2[3]);
+		//				setpoint.attitude.pitch -= (float) (nonLinearConst*1000/range_last2[3]);
+		//			}
+		//
+		//			if (range_last2[4]<1000.0 && range_last2[4]>0.0) {
+		//				setpoint.attitude.roll += (float)  (nonLinearConst*1000/range_last2[4]);
+		//				setpoint.attitude.pitch += (float) (nonLinearConst*1000/range_last2[4]);
+		//			}
+		//		}
+		//
+		//		if (Linear && !centerSensor) {
+		//			if (range_last2[1]<1000.0 && range_last2[1]>0.0) {
+		//				setpoint.attitude.roll -= LinearConst*(1 - range_last2[1]/1000);
+		//				setpoint.attitude.pitch += LinearConst*(1 - range_last2[1]/1000);
+		//			}
+		//
+		//			if (range_last2[2]<1000.0 && range_last2[2]>0.0) {
+		//				setpoint.attitude.roll -= LinearConst*(1 - range_last2[2]/1000);
+		//				setpoint.attitude.pitch -= LinearConst*(1 - range_last2[2]/1000);
+		//			}
+		//
+		//			if (range_last2[3]<1000.0 && range_last2[3]>0.0) {
+		//				setpoint.attitude.roll += LinearConst*(1 - range_last2[3]/1000);
+		//				setpoint.attitude.pitch -= LinearConst*(1 - range_last2[3]/1000);
+		//			}
+		//
+		//			if (range_last2[4]<1000.0 && range_last2[4]>0.0) {
+		//				setpoint.attitude.roll += LinearConst*(1 - range_last2[4]/1000);
+		//				setpoint.attitude.pitch += LinearConst*(1 - range_last2[4]/1000);
+		//			}
+		//		}
+		//
+		//		if (nonLinear && centerSensor) {
+		//			if (range_last2[1]<1000.0 && range_last2[1]>0.0) {
+		////				setpoint.attitude.roll -= (float)  (nonLinearConst*1000/range_last2[1]);
+		//				setpoint.attitude.pitch += (float) (nonLinearConst*1000/range_last2[1]);
+		//			}
+		//			//
+		//			if (range_last2[2]<1000.0 && range_last2[2]>0.0) {
+		//				setpoint.attitude.roll -= (float)  (nonLinearConst*1000/range_last2[2]);
+		////				setpoint.attitude.pitch -= (float) (nonLinearConst*1000/range_last2[2]);
+		//			}
+		//
+		//			if (range_last2[3]<1000.0 && range_last2[3]>0.0) {
+		////				setpoint.attitude.roll += (float)  (nonLinearConst*1000/range_last2[3]);
+		//				setpoint.attitude.pitch -= (float) (nonLinearConst*1000/range_last2[3]);
+		//			}
+		//
+		//			if (range_last2[4]<1000.0 && range_last2[4]>0.0) {
+		//				setpoint.attitude.roll += (float)  (nonLinearConst*1000/range_last2[4]);
+		////				setpoint.attitude.pitch += (float) (nonLinearConst*1000/range_last2[4]);
+		//			}
+		//		}
+		//
+		//		if (Linear && centerSensor) {
+		//			if (range_last2[1]<1000.0 && range_last2[1]>0.0) {
+		////				setpoint.attitude.roll -= LinearConst*(1 - range_last2[1]/1000);
+		//				setpoint.attitude.pitch += LinearConst*(1 - range_last2[1]/1000);
+		//			}
+		//
+		//			if (range_last2[2]<1000.0 && range_last2[2]>0.0) {
+		//				setpoint.attitude.roll -= LinearConst*(1 - range_last2[2]/1000);
+		////				setpoint.attitude.pitch -= LinearConst*(1 - range_last2[2]/1000);
+		//			}
+		//
+		//			if (range_last2[3]<1000.0 && range_last2[3]>0.0) {
+		////				setpoint.attitude.roll += LinearConst*(1 - range_last2[3]/1000);
+		//				setpoint.attitude.pitch -= LinearConst*(1 - range_last2[3]/1000);
+		//			}
+		//
+		//			if (range_last2[4]<1000.0 && range_last2[4]>0.0) {
+		//				setpoint.attitude.roll += LinearConst*(1 - range_last2[4]/1000);
+		////				setpoint.attitude.pitch += LinearConst*(1 - range_last2[4]/1000);
+		//			}
+		//		}
 
-			if (range_last2[3]<1000.0 && range_last2[3]>0.0) {
-				setpoint.attitude.roll += (float)  (nonLinearConst*1000/range_last2[3]);
-				setpoint.attitude.pitch -= (float) (nonLinearConst*1000/range_last2[3]);
-			}
 
-			if (range_last2[4]<1000.0 && range_last2[4]>0.0) {
-				setpoint.attitude.roll += (float)  (nonLinearConst*1000/range_last2[4]);
-				setpoint.attitude.pitch += (float) (nonLinearConst*1000/range_last2[4]);
-			}
-		}
+//		if (range_last2[1]<1000.0 && range_last2[1]>0.0) {
+//			//				setpoint.attitude.roll -= LinearConst*(1 - range_last2[1]/1000);
+//			setpoint.attitude.pitch += LinearConst*(1 - range_last2[1]/1000);
+//		}
+//
+//		if (range_last2[2]<1000.0 && range_last2[2]>0.0) {
+//			setpoint.attitude.roll -= LinearConst*(1 - range_last2[2]/1000);
+//			//				setpoint.attitude.pitch -= LinearConst*(1 - range_last2[2]/1000);
+//		}
+//
+//		if (range_last2[3]<1000.0 && range_last2[3]>0.0) {
+//			//				setpoint.attitude.roll += LinearConst*(1 - range_last2[3]/1000);
+//			setpoint.attitude.pitch -= LinearConst*(1 - range_last2[3]/1000);
+//		}
+//
+//		if (range_last2[4]<1000.0 && range_last2[4]>0.0) {
+//			setpoint.attitude.roll += LinearConst*(1 - range_last2[4]/1000);
+//			//				setpoint.attitude.pitch += LinearConst*(1 - range_last2[4]/1000);
+//		}
 
-		if (Linear) {
-			if (range_last2[1]<1000.0 && range_last2[1]>0.0) {
-				setpoint.attitude.roll -= LinearConst*(1 - range_last2[1]/1000);
-				setpoint.attitude.pitch += LinearConst*(1 - range_last2[1]/1000);
-			}
-
-			if (range_last2[2]<1000.0 && range_last2[2]>0.0) {
-				setpoint.attitude.roll -= LinearConst*(1 - range_last2[2]/1000);
-				setpoint.attitude.pitch -= LinearConst*(1 - range_last2[2]/1000);
-			}
-
-			if (range_last2[3]<1000.0 && range_last2[3]>0.0) {
-				setpoint.attitude.roll += LinearConst*(1 - range_last2[3]/1000);
-				setpoint.attitude.pitch -= LinearConst*(1 - range_last2[3]/1000);
-			}
-
-			if (range_last2[4]<1000.0 && range_last2[4]>0.0) {
-				setpoint.attitude.roll += LinearConst*(1 - range_last2[4]/1000);
-				setpoint.attitude.pitch += LinearConst*(1 - range_last2[4]/1000);
-			}
-		}
 
 		sitAwUpdateSetpoint(&setpoint, &sensorData, &state);
 
@@ -186,6 +253,9 @@ LOG_GROUP_START(stabilizer)
 LOG_ADD(LOG_FLOAT, roll, &state.attitude.roll)
 LOG_ADD(LOG_FLOAT, pitch, &state.attitude.pitch)
 LOG_ADD(LOG_FLOAT, yaw, &state.attitude.yaw)
+LOG_ADD(LOG_FLOAT, x, &state.position.x)
+LOG_ADD(LOG_FLOAT, y, &state.position.y)
+LOG_ADD(LOG_FLOAT, z, &state.position.z)
 LOG_ADD(LOG_UINT16, thrust, &control.thrust)
 LOG_GROUP_STOP(stabilizer)
 
@@ -213,24 +283,31 @@ LOG_ADD(LOG_FLOAT, y, &sensorData.mag.y)
 LOG_ADD(LOG_FLOAT, z, &sensorData.mag.z)
 LOG_GROUP_STOP(mag)
 
+LOG_GROUP_START(position)
+LOG_ADD(LOG_FLOAT, x, &sensorData.position.x)
+LOG_ADD(LOG_FLOAT, y, &sensorData.position.y)
+LOG_ADD(LOG_FLOAT, z, &sensorData.position.z)
+LOG_GROUP_STOP(position)
+
 LOG_GROUP_START(controller)
 LOG_ADD(LOG_INT16, ctr_yaw, &control.yaw)
 LOG_GROUP_STOP(controller)
 
-LOG_GROUP_START(range)
-//LOG_ADD(LOG_UINT16, range, &range_last)
-LOG_ADD(LOG_UINT16, range1, &range_last2[0])
-LOG_ADD(LOG_UINT16, range2, &range_last2[1])
-LOG_ADD(LOG_UINT16, range3, &range_last2[2])
-LOG_ADD(LOG_UINT16, range4, &range_last2[3])
-LOG_ADD(LOG_UINT16, range5, &range_last2[4])
-LOG_ADD(LOG_UINT16, range6, &range_last2[5])
-//LOG_ADD(LOG_UINT8, rangeStatus, &DeviceRangeStatusInternal)
-LOG_GROUP_STOP(range)
+//LOG_GROUP_START(range)
+////LOG_ADD(LOG_UINT16, range, &range_last)
+//LOG_ADD(LOG_UINT16, range1, &range_last2[0])
+//LOG_ADD(LOG_UINT16, range2, &range_last2[1])
+//LOG_ADD(LOG_UINT16, range3, &range_last2[2])
+//LOG_ADD(LOG_UINT16, range4, &range_last2[3])
+//LOG_ADD(LOG_UINT16, range5, &range_last2[4])
+//LOG_ADD(LOG_UINT16, range6, &range_last2[5])
+////LOG_ADD(LOG_UINT8, rangeStatus, &DeviceRangeStatusInternal)
+//LOG_GROUP_STOP(range)
 
-PARAM_GROUP_START(posCtlPid)
-PARAM_ADD(PARAM_UINT8, Linear, &Linear)
-PARAM_ADD(PARAM_FLOAT, LinearConst, &LinearConst)
-PARAM_ADD(PARAM_UINT8, nonLinear, &nonLinear)
-PARAM_ADD(PARAM_FLOAT, nonLinearConst, &nonLinearConst)
-PARAM_GROUP_STOP(posCtlPid)
+//PARAM_GROUP_START(posCtlPid)
+//PARAM_ADD(PARAM_UINT8, centerSensor, &centerSensor)
+//PARAM_ADD(PARAM_UINT8, Linear, &Linear)
+//PARAM_ADD(PARAM_FLOAT, LinearConst, &LinearConst)
+//PARAM_ADD(PARAM_UINT8, nonLinear, &nonLinear)
+//PARAM_ADD(PARAM_FLOAT, nonLinearConst, &nonLinearConst)
+//PARAM_GROUP_STOP(posCtlPid)
