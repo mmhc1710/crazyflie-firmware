@@ -190,7 +190,7 @@ void sensorsAcquire(sensorData_t *sensors, const uint32_t tick)
   sensorsReadMag(&sensors->mag);
   sensorsReadBaro(&sensors->baro);
   vl53l0xReadRange(&sensors->zrange, tick);
-  vl53l0xReadPosition(&sensors->position, tick);
+//  vl53l0xReadPosition(&sensors->position, tick);
 }
 
 bool sensorsAreCalibrated() {

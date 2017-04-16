@@ -59,6 +59,10 @@ static control_t control;
 //static uint8_t Linear = 1, nonLinear = 0;
 //static float LinearConst = 2.0, nonLinearConst = 0.5;
 //static uint8_t centerSensor = 1;
+#include "vl53l0x.h"
+point_t position;
+float kp = 2.0f;
+
 static void stabilizerTask(void* param);
 
 void stabilizerInit(void)
@@ -116,6 +120,7 @@ static void stabilizerTask(void* param)
 		vTaskDelayUntil(&lastWakeTime, F2T(RATE_MAIN_LOOP));
 
 		getExtPosition(&state);
+		vl53l0xReadPosition(&position, tick);
 #ifdef ESTIMATOR_TYPE_kalman
 		stateEstimatorUpdate(&state, &sensorData, &control);
 #else
@@ -124,6 +129,8 @@ static void stabilizerTask(void* param)
 #endif
 
 		commanderGetSetpoint(&setpoint, &state);
+		setpoint.attitude.pitch = kp*position.x;
+		setpoint.attitude.roll = kp*position.y;
 		//		if (nonLinear && !centerSensor) {
 		//			if (range_last2[1]<1000.0 && range_last2[1]>0.0) {
 		//				setpoint.attitude.roll -= (float)  (nonLinearConst*1000/range_last2[1]);
@@ -284,9 +291,9 @@ LOG_ADD(LOG_FLOAT, z, &sensorData.mag.z)
 LOG_GROUP_STOP(mag)
 
 LOG_GROUP_START(position)
-LOG_ADD(LOG_FLOAT, x, &sensorData.position.x)
-LOG_ADD(LOG_FLOAT, y, &sensorData.position.y)
-LOG_ADD(LOG_FLOAT, z, &sensorData.position.z)
+LOG_ADD(LOG_FLOAT, x, &position.x)
+LOG_ADD(LOG_FLOAT, y, &position.y)
+LOG_ADD(LOG_FLOAT, z, &position.z)
 LOG_GROUP_STOP(position)
 
 LOG_GROUP_START(controller)
@@ -304,10 +311,11 @@ LOG_GROUP_STOP(controller)
 ////LOG_ADD(LOG_UINT8, rangeStatus, &DeviceRangeStatusInternal)
 //LOG_GROUP_STOP(range)
 
-//PARAM_GROUP_START(posCtlPid)
+PARAM_GROUP_START(posCtlPid)
 //PARAM_ADD(PARAM_UINT8, centerSensor, &centerSensor)
 //PARAM_ADD(PARAM_UINT8, Linear, &Linear)
 //PARAM_ADD(PARAM_FLOAT, LinearConst, &LinearConst)
 //PARAM_ADD(PARAM_UINT8, nonLinear, &nonLinear)
 //PARAM_ADD(PARAM_FLOAT, nonLinearConst, &nonLinearConst)
-//PARAM_GROUP_STOP(posCtlPid)
+PARAM_ADD(PARAM_FLOAT, kp, &kp)
+PARAM_GROUP_STOP(posCtlPid)

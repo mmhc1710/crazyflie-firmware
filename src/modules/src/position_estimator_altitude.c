@@ -83,10 +83,11 @@ static void positionEstimateInternal(state_t* estimate, const sensorData_t* sens
     }
   } else {
     // IIR filter asl
-    filteredZ = (state->estAlphaAsl       ) * state->estimatedZ +
-                (1.0f - state->estAlphaAsl) * sensorData->baro.asl;
+//	  filteredZ = state->estimatedZ;
+//    filteredZ = (state->estAlphaAsl       ) * state->estimatedZ +
+//                (1.0f - state->estAlphaAsl) * sensorData->baro.asl;
     // Use asl as base and add velocity changes.
-    state->estimatedZ = filteredZ + (state->velocityFactor * state->velocityZ * dt);
+//    state->estimatedZ = filteredZ + (state->velocityFactor * state->velocityZ * dt);
   }
 
 
