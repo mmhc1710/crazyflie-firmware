@@ -60,7 +60,7 @@ static control_t control;
 //static float LinearConst = 2.0, nonLinearConst = 0.5;
 //static uint8_t centerSensor = 1;
 #include "vl53l0x.h"
-point_t position;
+ point_t position;
 float kp = 2.0f;
 
 static void stabilizerTask(void* param);
