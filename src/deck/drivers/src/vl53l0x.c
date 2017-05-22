@@ -260,19 +260,19 @@ bool vl53l0xReadPosition(point_t* position, const uint32_t tick)
 
 	if (isInit) {
 		if ((range_last2[1] != 0 && range_last2[1] < RANGE_OUTLIER_LIMIT) && (range_last2[3] != 0 && range_last2[3] < RANGE_OUTLIER_LIMIT)) {
-			position->x = (float)(range_last2[3]-range_last2[1])/2.0f * 0.001f; // Scale from [mm] to [m]
+			position->x = (float)(range_last2[3]-range_last2[1])/2.0f; // Scale from [mm] to [m]
 			position->timestamp = tick;
 			updated = true;
 		} //else {position->x = 0.0f; position->timestamp = tick;}
 
 		if ((range_last2[2] != 0 && range_last2[2] < RANGE_OUTLIER_LIMIT) && (range_last2[4] != 0 && range_last2[4] < RANGE_OUTLIER_LIMIT)) {
-					position->y = (float)(range_last2[4]-range_last2[2])/2.0f * 0.001f; // Scale from [mm] to [m]
+					position->y = (float)(range_last2[4]-range_last2[2])/2.0f; // Scale from [mm] to [m]
 					position->timestamp = tick;
 					updated = true;
 				}
 
 		if ((range_last2[0] != 0 && range_last2[0] < RANGE_OUTLIER_LIMIT) && (range_last2[5] != 0 && range_last2[5] < RANGE_OUTLIER_LIMIT)) {
-			position->z = (float)(range_last2[5]-range_last2[0])/2.0f * 0.001f; // Scale from [mm] to [m]
+			position->z = (float)(range_last2[5]-range_last2[0])/2.0f; // Scale from [mm] to [m]
 			position->timestamp = tick;
 			updated = true;
 		}

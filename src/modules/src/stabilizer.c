@@ -55,13 +55,14 @@ static sensorData_t sensorData;
 static state_t state;
 static control_t control;
 //
-//extern uint16_t range_last2[6];
+#define RANGE_OUTLIER_LIMIT 3000 // the measured range is in [mm]
+extern uint16_t range_last2[6];
 //static uint8_t Linear = 1, nonLinear = 0;
 //static float LinearConst = 2.0, nonLinearConst = 0.5;
 //static uint8_t centerSensor = 1;
 #include "vl53l0x.h"
- point_t position;
-float kp = 2.0f;
+point_t position;
+float kp = 0.002f;
 
 static void stabilizerTask(void* param);
 
@@ -120,7 +121,7 @@ static void stabilizerTask(void* param)
 		vTaskDelayUntil(&lastWakeTime, F2T(RATE_MAIN_LOOP));
 
 		getExtPosition(&state);
-		vl53l0xReadPosition(&position, tick);
+		//vl53l0xReadPosition(&position, tick);
 #ifdef ESTIMATOR_TYPE_kalman
 		stateEstimatorUpdate(&state, &sensorData, &control);
 #else
@@ -129,8 +130,28 @@ static void stabilizerTask(void* param)
 #endif
 
 		commanderGetSetpoint(&setpoint, &state);
-		setpoint.attitude.pitch = kp*position.x;
-		setpoint.attitude.roll = kp*position.y;
+		position.x = 0.0f;
+		position.y = 0.0f;
+		if (range_last2[3] != 0 && range_last2[3] < RANGE_OUTLIER_LIMIT) {
+			position.x += (float)range_last2[3]/2.0f;
+		}
+		if (range_last2[1] != 0 && range_last2[1] < RANGE_OUTLIER_LIMIT) {
+			position.x -= (float)range_last2[1]/2.0f;
+		}
+		if (range_last2[4] != 0 && range_last2[4] < RANGE_OUTLIER_LIMIT) {
+			position.y += (float)range_last2[4]/2.0f;
+		}
+		if (range_last2[2] != 0 && range_last2[2] < RANGE_OUTLIER_LIMIT) {
+			position.y -= (float)range_last2[2]/2.0f;
+		}
+
+		//		if ((range_last2[1] != 0 && range_last2[1] < RANGE_OUTLIER_LIMIT) && (range_last2[3] != 0 && range_last2[3] < RANGE_OUTLIER_LIMIT)) {
+		//					position.x = (float)(range_last2[3]-range_last2[1])/2.0f; // Scale from [mm] to [m]
+		//					//position->timestamp = tick;
+		//					//updated = true;
+		//				}
+		setpoint.attitude.pitch += kp*position.x;
+		setpoint.attitude.roll -= kp*position.y;
 		//		if (nonLinear && !centerSensor) {
 		//			if (range_last2[1]<1000.0 && range_last2[1]>0.0) {
 		//				setpoint.attitude.roll -= (float)  (nonLinearConst*1000/range_last2[1]);
@@ -220,25 +241,25 @@ static void stabilizerTask(void* param)
 		//		}
 
 
-//		if (range_last2[1]<1000.0 && range_last2[1]>0.0) {
-//			//				setpoint.attitude.roll -= LinearConst*(1 - range_last2[1]/1000);
-//			setpoint.attitude.pitch += LinearConst*(1 - range_last2[1]/1000);
-//		}
-//
-//		if (range_last2[2]<1000.0 && range_last2[2]>0.0) {
-//			setpoint.attitude.roll -= LinearConst*(1 - range_last2[2]/1000);
-//			//				setpoint.attitude.pitch -= LinearConst*(1 - range_last2[2]/1000);
-//		}
-//
-//		if (range_last2[3]<1000.0 && range_last2[3]>0.0) {
-//			//				setpoint.attitude.roll += LinearConst*(1 - range_last2[3]/1000);
-//			setpoint.attitude.pitch -= LinearConst*(1 - range_last2[3]/1000);
-//		}
-//
-//		if (range_last2[4]<1000.0 && range_last2[4]>0.0) {
-//			setpoint.attitude.roll += LinearConst*(1 - range_last2[4]/1000);
-//			//				setpoint.attitude.pitch += LinearConst*(1 - range_last2[4]/1000);
-//		}
+		//		if (range_last2[1]<1000.0 && range_last2[1]>0.0) {
+		//			//				setpoint.attitude.roll -= LinearConst*(1 - range_last2[1]/1000);
+		//			setpoint.attitude.pitch += LinearConst*(1 - range_last2[1]/1000);
+		//		}
+		//
+		//		if (range_last2[2]<1000.0 && range_last2[2]>0.0) {
+		//			setpoint.attitude.roll -= LinearConst*(1 - range_last2[2]/1000);
+		//			//				setpoint.attitude.pitch -= LinearConst*(1 - range_last2[2]/1000);
+		//		}
+		//
+		//		if (range_last2[3]<1000.0 && range_last2[3]>0.0) {
+		//			//				setpoint.attitude.roll += LinearConst*(1 - range_last2[3]/1000);
+		//			setpoint.attitude.pitch -= LinearConst*(1 - range_last2[3]/1000);
+		//		}
+		//
+		//		if (range_last2[4]<1000.0 && range_last2[4]>0.0) {
+		//			setpoint.attitude.roll += LinearConst*(1 - range_last2[4]/1000);
+		//			//				setpoint.attitude.pitch += LinearConst*(1 - range_last2[4]/1000);
+		//		}
 
 
 		sitAwUpdateSetpoint(&setpoint, &sensorData, &state);
