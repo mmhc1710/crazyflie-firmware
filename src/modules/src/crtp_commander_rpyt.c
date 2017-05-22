@@ -75,7 +75,7 @@ static YawModeType yawMode = DEFAULT_YAW_MODE; // Yaw mode configuration
 static bool carefreeResetFront;             // Reset what is front in carefree mode
 
 static bool thrustLocked = true;
-static bool altHoldMode = false;
+bool altHoldMode = false;
 static bool posHoldMode = false;
 static bool posSetMode = false;
 

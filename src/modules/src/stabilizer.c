@@ -55,7 +55,8 @@ static sensorData_t sensorData;
 static state_t state;
 static control_t control;
 //
-#define RANGE_OUTLIER_LIMIT 3000 // the measured range is in [mm]
+extern bool altHoldMode;
+#define RANGE_OUTLIER_LIMIT 1000 // the measured range is in [mm]
 extern uint16_t range_last2[6];
 //static uint8_t Linear = 1, nonLinear = 0;
 //static float LinearConst = 2.0, nonLinearConst = 0.5;
@@ -150,8 +151,10 @@ static void stabilizerTask(void* param)
 		//					//position->timestamp = tick;
 		//					//updated = true;
 		//				}
-		setpoint.attitude.pitch += kp*position.x;
-		setpoint.attitude.roll -= kp*position.y;
+		if (altHoldMode) {
+			setpoint.attitude.pitch = kp*(position.x-position.y);
+			setpoint.attitude.roll = kp*(-position.x-position.y);
+		}
 		//		if (nonLinear && !centerSensor) {
 		//			if (range_last2[1]<1000.0 && range_last2[1]>0.0) {
 		//				setpoint.attitude.roll -= (float)  (nonLinearConst*1000/range_last2[1]);
