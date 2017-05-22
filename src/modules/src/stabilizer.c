@@ -146,11 +146,6 @@ static void stabilizerTask(void* param)
 			position.y -= (float)range_last2[2]/2.0f;
 		}
 
-		//		if ((range_last2[1] != 0 && range_last2[1] < RANGE_OUTLIER_LIMIT) && (range_last2[3] != 0 && range_last2[3] < RANGE_OUTLIER_LIMIT)) {
-		//					position.x = (float)(range_last2[3]-range_last2[1])/2.0f; // Scale from [mm] to [m]
-		//					//position->timestamp = tick;
-		//					//updated = true;
-		//				}
 		if (altHoldMode) {
 			setpoint.attitude.pitch = kp*(position.x-position.y);
 			setpoint.attitude.roll = kp*(-position.x-position.y);
