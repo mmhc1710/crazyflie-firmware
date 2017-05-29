@@ -56,14 +56,19 @@ static state_t state;
 static control_t control;
 //
 extern bool altHoldMode;
-#define RANGE_OUTLIER_LIMIT 1000 // the measured range is in [mm]
+#define RANGE_OUTLIER_LIMIT 3000 // the measured range is in [mm]
 extern uint16_t range_last2[6];
 //static uint8_t Linear = 1, nonLinear = 0;
 //static float LinearConst = 2.0, nonLinearConst = 0.5;
 //static uint8_t centerSensor = 1;
 #include "vl53l0x.h"
-point_t position;
-float kp = 0.002f;
+static point_t position;
+static point_t estimate;
+static float kp = 0.002f;
+static float xC = 0.0f;
+static float yC = 0.0f;
+static float alpha = 0.93f;
+#define N 1
 
 static void stabilizerTask(void* param);
 
@@ -107,6 +112,10 @@ static void stabilizerTask(void* param)
 {
 	uint32_t tick = 0;
 	uint32_t lastWakeTime;
+	bool firstRun = true;
+	float prevX[N], sumX = 0.0f;
+	float prevY[N], sumY = 0.0f;
+	uint8_t n = 0;
 	vTaskSetApplicationTaskTag(0, (void*)TASK_STABILIZER_ID_NBR);
 
 	//Wait for the system to be fully started to start stabilization loop
@@ -131,25 +140,65 @@ static void stabilizerTask(void* param)
 #endif
 
 		commanderGetSetpoint(&setpoint, &state);
-		position.x = 0.0f;
-		position.y = 0.0f;
-		if (range_last2[3] != 0 && range_last2[3] < RANGE_OUTLIER_LIMIT) {
-			position.x += (float)range_last2[3]/2.0f;
-		}
-		if (range_last2[1] != 0 && range_last2[1] < RANGE_OUTLIER_LIMIT) {
-			position.x -= (float)range_last2[1]/2.0f;
-		}
-		if (range_last2[4] != 0 && range_last2[4] < RANGE_OUTLIER_LIMIT) {
-			position.y += (float)range_last2[4]/2.0f;
-		}
-		if (range_last2[2] != 0 && range_last2[2] < RANGE_OUTLIER_LIMIT) {
-			position.y -= (float)range_last2[2]/2.0f;
-		}
 
-		if (altHoldMode) {
-			setpoint.attitude.pitch = kp*(position.x-position.y);
-			setpoint.attitude.roll = kp*(-position.x-position.y);
+		if (vl53l0xReadPosition(&position, tick)) {
+			position.x += xC;
+			position.y += yC;
 		}
+		position.z = tick - position.timestamp;
+
+		//		if (position.timestamp==tick) {
+		//			estimate.x = estimate.x + alpha * (position.x - estimate.x);
+		//			n++;
+		//		}
+
+		if (firstRun && (position.timestamp==tick)) {
+			//			estimate.x = position.x;
+			//			estimate.y = position.y;
+			prevX[n] = position.x;
+			sumX += position.x;
+			prevY[n] = position.y;
+			sumY += position.y;
+			n++;
+			if (n==N) {
+				estimate.x = (float) sumX/N;
+				estimate.y = (float) sumY/N;
+				firstRun = false;
+			}
+		}
+		if (!firstRun && (position.timestamp==tick)) {
+			estimate.x += (float) ((position.x - prevX[0])/N);
+			estimate.y += (float) ((position.y - prevY[0])/N);
+			for (int i=0;i<N-1;i++) {
+				prevX[i] = prevX[i+1];
+				prevY[i] = prevY[i+1];
+			}
+			prevX[N-1] = position.x;
+			prevY[N-1] = position.y;
+			//			estimate.x = alpha * estimate.x + (1.0f - alpha) * position.x;
+			//			estimate.y = alpha * estimate.y + (1.0f - alpha) * position.y;
+		}
+		if (1) {
+			setpoint.attitude.pitch = kp*(estimate.x);
+			setpoint.attitude.roll = kp*(-estimate.y);
+		}
+		//		if (range_last2[3] != 0 && range_last2[3] < RANGE_OUTLIER_LIMIT) {
+		//			position.x += (float)range_last2[3]/2.0f;
+		//		}
+		//		if (range_last2[1] != 0 && range_last2[1] < RANGE_OUTLIER_LIMIT) {
+		//			position.x -= (float)range_last2[1]/2.0f;
+		//		}
+		//		if (range_last2[4] != 0 && range_last2[4] < RANGE_OUTLIER_LIMIT) {
+		//			position.y += (float)range_last2[4]/2.0f;
+		//		}
+		//		if (range_last2[2] != 0 && range_last2[2] < RANGE_OUTLIER_LIMIT) {
+		//			position.y -= (float)range_last2[2]/2.0f;
+		//		}
+
+		//		if (altHoldMode) {
+		//			setpoint.attitude.pitch = kp*(position.x-position.y);
+		//			setpoint.attitude.roll = kp*(-position.x-position.y);
+		//		}
 		//		if (nonLinear && !centerSensor) {
 		//			if (range_last2[1]<1000.0 && range_last2[1]>0.0) {
 		//				setpoint.attitude.roll -= (float)  (nonLinearConst*1000/range_last2[1]);
@@ -313,6 +362,9 @@ LOG_GROUP_START(position)
 LOG_ADD(LOG_FLOAT, x, &position.x)
 LOG_ADD(LOG_FLOAT, y, &position.y)
 LOG_ADD(LOG_FLOAT, z, &position.z)
+LOG_ADD(LOG_FLOAT, estimateX, &estimate.x)
+LOG_ADD(LOG_FLOAT, estimateY, &estimate.y)
+LOG_ADD(LOG_UINT32, tick, &position.timestamp)
 LOG_GROUP_STOP(position)
 
 LOG_GROUP_START(controller)
@@ -337,4 +389,7 @@ PARAM_GROUP_START(posCtlPid)
 //PARAM_ADD(PARAM_UINT8, nonLinear, &nonLinear)
 //PARAM_ADD(PARAM_FLOAT, nonLinearConst, &nonLinearConst)
 PARAM_ADD(PARAM_FLOAT, kp, &kp)
+PARAM_ADD(PARAM_FLOAT, xC, &xC)
+PARAM_ADD(PARAM_FLOAT, yC, &yC)
+PARAM_ADD(PARAM_FLOAT, alpha, &alpha)
 PARAM_GROUP_STOP(posCtlPid)

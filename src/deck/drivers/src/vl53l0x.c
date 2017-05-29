@@ -54,7 +54,7 @@ static float expCoeff;
 #endif // UPDATE_KALMAN_WITH_RANGING
 #endif // ESTIMATOR_TYPE_kalman
 
-#define RANGE_OUTLIER_LIMIT 10000//3000 // the measured range is in [mm]
+#define RANGE_OUTLIER_LIMIT 3000 // the measured range is in [mm]
 
 static uint8_t devAddr;
 static I2C_Dev *I2Cx;
@@ -259,23 +259,46 @@ bool vl53l0xReadPosition(point_t* position, const uint32_t tick)
 	bool updated = false;
 
 	if (isInit) {
-		if ((range_last2[1] != 0 && range_last2[1] < RANGE_OUTLIER_LIMIT) && (range_last2[3] != 0 && range_last2[3] < RANGE_OUTLIER_LIMIT)) {
-			position->x = (float)(range_last2[3]-range_last2[1])/2.0f; // Scale from [mm] to [m]
-			position->timestamp = tick;
+		if (range_last2[3] != 0 && range_last2[3] < RANGE_OUTLIER_LIMIT) {
+			//			position.x += (float)range_last2[3]/2.0f;
 			updated = true;
-		} //else {position->x = 0.0f; position->timestamp = tick;}
-
-		if ((range_last2[2] != 0 && range_last2[2] < RANGE_OUTLIER_LIMIT) && (range_last2[4] != 0 && range_last2[4] < RANGE_OUTLIER_LIMIT)) {
-					position->y = (float)(range_last2[4]-range_last2[2])/2.0f; // Scale from [mm] to [m]
-					position->timestamp = tick;
-					updated = true;
-				}
-
-		if ((range_last2[0] != 0 && range_last2[0] < RANGE_OUTLIER_LIMIT) && (range_last2[5] != 0 && range_last2[5] < RANGE_OUTLIER_LIMIT)) {
-			position->z = (float)(range_last2[5]-range_last2[0])/2.0f; // Scale from [mm] to [m]
+		} else updated = false;
+		if (range_last2[1] != 0 && range_last2[1] < RANGE_OUTLIER_LIMIT) {
+			//			position.x -= (float)range_last2[1]/2.0f;
+			updated &= true;
+		} else updated = false;
+		if (range_last2[4] != 0 && range_last2[4] < RANGE_OUTLIER_LIMIT) {
+//			position.y += (float)range_last2[4]/2.0f;
+			updated &= true;
+		} else updated = false;
+		if (range_last2[2] != 0 && range_last2[2] < RANGE_OUTLIER_LIMIT) {
+//			position.y -= (float)range_last2[2]/2.0f;
+			updated &= true;
+		} else updated = false;
+		if (updated) {
+			position->x = (float)range_last2[3]/2.0f;
+			position->x -= (float)range_last2[1]/2.0f;
+			position->y = (float)range_last2[4]/2.0f;
+			position->y -= (float)range_last2[2]/2.0f;
 			position->timestamp = tick;
-			updated = true;
 		}
+		//		if ((range_last2[1] != 0 && range_last2[1] < RANGE_OUTLIER_LIMIT) && (range_last2[3] != 0 && range_last2[3] < RANGE_OUTLIER_LIMIT)) {
+		//			position->x = (float)(range_last2[3]-range_last2[1])/2.0f; // Scale from [mm] to [m]
+		//			position->timestamp = tick;
+		//			updated = true;
+		//		} //else {position->x = 0.0f; position->timestamp = tick;}
+		//
+		//		if ((range_last2[2] != 0 && range_last2[2] < RANGE_OUTLIER_LIMIT) && (range_last2[4] != 0 && range_last2[4] < RANGE_OUTLIER_LIMIT)) {
+		//					position->y = (float)(range_last2[4]-range_last2[2])/2.0f; // Scale from [mm] to [m]
+		//					position->timestamp = tick;
+		//					updated = true;
+		//				}
+		//
+		//		if ((range_last2[0] != 0 && range_last2[0] < RANGE_OUTLIER_LIMIT) && (range_last2[5] != 0 && range_last2[5] < RANGE_OUTLIER_LIMIT)) {
+		//			position->z = (float)(range_last2[5]-range_last2[0])/2.0f; // Scale from [mm] to [m]
+		//			position->timestamp = tick;
+		//			updated = true;
+		//		}
 	}
 	return updated;
 }
@@ -499,7 +522,7 @@ bool vl53l0xInitSensor(bool io_2v8)
 
 	// -- VL53L0X_load_tuning_settings() end
 
-			// "Set interrupt config to new sample ready"
+	// "Set interrupt config to new sample ready"
 	// -- VL53L0X_SetGpioConfig() begin
 
 	i2cdevWriteByte(I2Cx, devAddr, VL53L0X_RA_SYSTEM_INTERRUPT_CONFIG_GPIO, 0x04);
@@ -993,7 +1016,7 @@ uint16_t vl53l0xReadRangeContinuousMillimeters(void)
 
 	i2cdevWriteByte(I2Cx, devAddr, VL53L0X_RA_SYSTEM_INTERRUPT_CLEAR, 0x01);
 	//  if ((DeviceRangeStatusInternal==6) || (DeviceRangeStatusInternal==9)) return 65535;
-//	if (DeviceRangeStatusInternal!=11) return 2000;
+	//	if (DeviceRangeStatusInternal!=11) return 2000;
 
 	return range;
 }
