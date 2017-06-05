@@ -72,7 +72,7 @@ static float xC = 0.0f;
 static float yC = 0.0f;
 static float alpha = 0.93f;
 //static uint8_t makeCenter = 1;
-#define N 1
+#define N 10
 
 static void stabilizerTask(void* param);
 
@@ -146,15 +146,15 @@ static void stabilizerTask(void* param)
 		commanderGetSetpoint(&setpoint, &state);
 
 		if (vl53l0xReadPosition(&position, tick)) {
-//			if (makeCenter==1) {
-//				xC = position.x;
-//				yC = position.y;
-//				makeCenter = 0;
-//			}
+			//			if (makeCenter==1) {
+			//				xC = position.x;
+			//				yC = position.y;
+			//				makeCenter = 0;
+			//			}
 			position.x += xC;
 			position.y += yC;
 		}
-		position.z = tick - position.timestamp;
+
 
 		//		if (position.timestamp==tick) {
 		//			estimate.x = estimate.x + alpha * (position.x - estimate.x);
@@ -176,20 +176,24 @@ static void stabilizerTask(void* param)
 			}
 		}
 		if (!firstRun && (position.timestamp==tick)) {
-			estimate.x += (float) ((position.x - prevX[0])/N);
-			estimate.y += (float) ((position.y - prevY[0])/N);
-			vel.x = (float) (estimate.x - estimate_old.x)*1000.0f;
-			vel.y = (float) (estimate.y - estimate_old.y)*1000.0f;
-			for (int i=0;i<N-1;i++) {
-				prevX[i] = prevX[i+1];
-				prevY[i] = prevY[i+1];
+			if ((fabs(position.x-estimate.x)<3000.0) && (fabs(position.y-estimate.y)<3000.0)) {
+				estimate.x += (float) ((position.x - prevX[0])/N);
+				estimate.y += (float) ((position.y - prevY[0])/N);
+				position.z = fabs(position.x-estimate.x);
+				vel.x = (float) (estimate.x - estimate_old.x);
+				vel.y = (float) (estimate.y - estimate_old.y);
+
+				for (int i=0;i<N-1;i++) {
+					prevX[i] = prevX[i+1];
+					prevY[i] = prevY[i+1];
+				}
+				prevX[N-1] = position.x;
+				prevY[N-1] = position.y;
+				estimate_old.x = estimate.x;
+				estimate_old.y = estimate.y;
+				//			estimate.x = alpha * estimate.x + (1.0f - alpha) * position.x;
+				//			estimate.y = alpha * estimate.y + (1.0f - alpha) * position.y;
 			}
-			prevX[N-1] = position.x;
-			prevY[N-1] = position.y;
-			estimate_old.x = estimate.x;
-			estimate_old.y = estimate.y;
-			//			estimate.x = alpha * estimate.x + (1.0f - alpha) * position.x;
-			//			estimate.y = alpha * estimate.y + (1.0f - alpha) * position.y;
 		}
 		if (1) {
 			setpoint.attitude.pitch = kp*(estimate.x) + kd*(vel.x);
