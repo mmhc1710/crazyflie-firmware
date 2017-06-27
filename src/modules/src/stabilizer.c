@@ -67,12 +67,12 @@ static point_t estimate;
 static point_t estimate_old;
 static point_t vel;
 static float kp = 0.002f;
-static float kd = 0.002f;
+static float kd = 0.000f;
 static float xC = 0.0f;
 static float yC = 0.0f;
 static float alpha = 0.93f;
 //static uint8_t makeCenter = 1;
-#define N 10
+#define N 100
 
 static void stabilizerTask(void* param);
 
@@ -172,30 +172,42 @@ static void stabilizerTask(void* param)
 			if (n==N) {
 				estimate.x = (float) sumX/N;
 				estimate.y = (float) sumY/N;
+				estimate_old.x = estimate.x;
+				estimate_old.y = estimate.y;
 				firstRun = false;
 			}
 		}
 		if (!firstRun && (position.timestamp==tick)) {
 			if ((fabs(position.x-estimate.x)<3000.0) && (fabs(position.y-estimate.y)<3000.0)) {
-				estimate.x += (float) ((position.x - prevX[0])/N);
-				estimate.y += (float) ((position.y - prevY[0])/N);
-				position.z = fabs(position.x-estimate.x);
-				vel.x = (float) (estimate.x - estimate_old.x);
-				vel.y = (float) (estimate.y - estimate_old.y);
-
+				//estimate.x += (float) ((position.x - prevX[0])/N);
+				//estimate.y += (float) ((position.y - prevY[0])/N);
+				//position.z = fabs(position.x-estimate.x);
+				//vel.x = (float) (estimate.x - estimate_old.x);
+				//vel.y = (float) (estimate.y - estimate_old.y);
+				sumX = 0;
+				sumY = 0;
 				for (int i=0;i<N-1;i++) {
 					prevX[i] = prevX[i+1];
 					prevY[i] = prevY[i+1];
+					sumX += prevX[i+1];
+					sumY += prevY[i+1];
 				}
 				prevX[N-1] = position.x;
 				prevY[N-1] = position.y;
+				sumX += position.x;
+				sumY += position.y;
+
+				estimate.x = (float) sumX/N;
+				estimate.y = (float) sumY/N;
+				vel.x = (float) (estimate.x - estimate_old.x);
+				vel.y = (float) (estimate.y - estimate_old.y);
 				estimate_old.x = estimate.x;
 				estimate_old.y = estimate.y;
 				//			estimate.x = alpha * estimate.x + (1.0f - alpha) * position.x;
 				//			estimate.y = alpha * estimate.y + (1.0f - alpha) * position.y;
 			}
 		}
-		if (1) {
+		if (!firstRun) {
 			setpoint.attitude.pitch = kp*(estimate.x) + kd*(vel.x);
 			setpoint.attitude.roll = kp*(-estimate.y) + kd*(vel.y);;
 		}
