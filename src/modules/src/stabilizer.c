@@ -175,6 +175,8 @@ static void stabilizerTask(void* param)
 				estimate_old.x = estimate.x;
 				estimate_old.y = estimate.y;
 				firstRun = false;
+				xC = -estimate.x;
+				yC = -estimate.y;
 			}
 		}
 		if (!firstRun && (position.timestamp==tick)) {
