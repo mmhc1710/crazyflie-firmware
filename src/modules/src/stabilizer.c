@@ -65,12 +65,13 @@ extern uint16_t range_last2[6];
 static point_t position;
 static point_t estimate;
 static point_t estimate_old;
-static point_t vel;
+static velocity_t vel;
 static float kp = 0.002f;
 static float kd = 0.000f;
 static float xC = 0.0f;
 static float yC = 0.0f;
 static float alpha = 0.93f;
+static uint32_t tickOld = 0;
 //static uint8_t makeCenter = 1;
 #define N 100
 
@@ -174,6 +175,7 @@ static void stabilizerTask(void* param)
 				estimate.y = (float) sumY/N;
 				estimate_old.x = estimate.x;
 				estimate_old.y = estimate.y;
+				tickOld = tick;
 				firstRun = false;
 				xC = -estimate.x;
 				yC = -estimate.y;
@@ -201,17 +203,18 @@ static void stabilizerTask(void* param)
 
 				estimate.x = (float) sumX/N;
 				estimate.y = (float) sumY/N;
-				vel.x = (float) (estimate.x - estimate_old.x);
-				vel.y = (float) (estimate.y - estimate_old.y);
+				vel.x = (float) ((estimate.x - estimate_old.x)*1000/(tick-tickOld));
+				vel.y = (float) (estimate.y - estimate_old.y)*1000/(tick-tickOld);
 				estimate_old.x = estimate.x;
 				estimate_old.y = estimate.y;
+				tickOld = tick;
 				//			estimate.x = alpha * estimate.x + (1.0f - alpha) * position.x;
 				//			estimate.y = alpha * estimate.y + (1.0f - alpha) * position.y;
 			}
 		}
 		if (!firstRun) {
 			setpoint.attitude.pitch = kp*(estimate.x) + kd*(vel.x);
-			setpoint.attitude.roll = kp*(-estimate.y) + kd*(vel.y);;
+			setpoint.attitude.roll = kp*(-estimate.y) + kd*(-vel.y);;
 		}
 
 		sitAwUpdateSetpoint(&setpoint, &sensorData, &state);
@@ -266,7 +269,7 @@ LOG_GROUP_STOP(mag)
 LOG_GROUP_START(position)
 LOG_ADD(LOG_FLOAT, x, &position.x)
 LOG_ADD(LOG_FLOAT, y, &position.y)
-LOG_ADD(LOG_FLOAT, z, &position.z)
+LOG_ADD(LOG_FLOAT, tick, &tickOld)
 LOG_ADD(LOG_FLOAT, estimateX, &estimate.x)
 LOG_ADD(LOG_FLOAT, estimateY, &estimate.y)
 LOG_ADD(LOG_FLOAT, velX, &vel.x)
