@@ -275,11 +275,16 @@ bool vl53l0xReadPosition(point_t* position, const uint32_t tick)
 //			position.y -= (float)range_last2[2]/2.0f;
 			updated &= true;
 		} else updated = false;
+		if (range_last2[5] != 0 && range_last2[5] < RANGE_OUTLIER_LIMIT) {
+		//			position.y -= (float)range_last2[2]/2.0f;
+					updated &= true;
+				} else updated = false;
 		if (updated) {
 			position->x = (float)range_last2[3]/2.0f;
 			position->x -= (float)range_last2[1]/2.0f;
 			position->y = (float)range_last2[4]/2.0f;
 			position->y -= (float)range_last2[2]/2.0f;
+			position->z = range_last2[5];
 			position->timestamp = tick;
 		}
 		//		if ((range_last2[1] != 0 && range_last2[1] < RANGE_OUTLIER_LIMIT) && (range_last2[3] != 0 && range_last2[3] < RANGE_OUTLIER_LIMIT)) {

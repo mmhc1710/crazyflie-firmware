@@ -47,6 +47,17 @@
 #include "estimator.h"
 #endif
 
+#include "math.h"
+#include "arm_math.h"
+#define DEG_TO_RAD (PI/180.0f)
+#define RAD_TO_DEG (180.0f/PI)
+static inline void mat_trans(const arm_matrix_instance_f32 * pSrc, arm_matrix_instance_f32 * pDst)
+{ configASSERT(ARM_MATH_SUCCESS == arm_mat_trans_f32(pSrc, pDst)); }
+static inline void mat_inv(const arm_matrix_instance_f32 * pSrc, arm_matrix_instance_f32 * pDst)
+{ configASSERT(ARM_MATH_SUCCESS == arm_mat_inverse_f32(pSrc, pDst)); }
+static inline void mat_mult(const arm_matrix_instance_f32 * pSrcA, const arm_matrix_instance_f32 * pSrcB, arm_matrix_instance_f32 * pDst)
+{ configASSERT(ARM_MATH_SUCCESS == arm_mat_mult_f32(pSrcA, pSrcB, pDst)); }
+
 static bool isInit;
 
 // State variables for the stabilizer
@@ -64,14 +75,14 @@ extern uint16_t range_last2[6];
 #include "vl53l0x.h"
 static point_t position;
 static point_t estimate;
-static point_t estimate_old;
-static velocity_t vel;
-static float kp = 0.002f;
+//static point_t estimate_old;
+//static velocity_t vel;
+static float kp = 0.01f;
 static float kd = 0.000f;
 static float xC = 0.0f;
 static float yC = 0.0f;
 static float alpha = 0.93f;
-static uint32_t tickOld = 0;
+//static uint32_t tickOld = 0;
 //static uint8_t makeCenter = 1;
 #define N 100
 
@@ -117,10 +128,10 @@ static void stabilizerTask(void* param)
 {
 	uint32_t tick = 0;
 	uint32_t lastWakeTime;
-	bool firstRun = true;
-	float prevX[N], sumX = 0.0f;
-	float prevY[N], sumY = 0.0f;
-	uint8_t n = 0;
+//	bool firstRun = true;
+//	float prevX[N], sumX = 0.0f;
+//	float prevY[N], sumY = 0.0f;
+//	uint8_t n = 0;
 	vTaskSetApplicationTaskTag(0, (void*)TASK_STABILIZER_ID_NBR);
 
 	//Wait for the system to be fully started to start stabilization loop
@@ -147,75 +158,90 @@ static void stabilizerTask(void* param)
 		commanderGetSetpoint(&setpoint, &state);
 
 		if (vl53l0xReadPosition(&position, tick)) {
-			//			if (makeCenter==1) {
-			//				xC = position.x;
-			//				yC = position.y;
-			//				makeCenter = 0;
-			//			}
-			position.x += xC;
-			position.y += yC;
+//			position.x += xC;
+//			position.y += yC;
 		}
 
+//		if (firstRun && (position.timestamp==tick)) {
+//			prevX[n] = position.x;
+//			sumX += position.x;
+//			prevY[n] = position.y;
+//			sumY += position.y;
+//			n++;
+//			if (n==N) {
+//				estimate.x = (float) sumX/N;
+//				estimate.y = (float) sumY/N;
+//				estimate_old.x = estimate.x;
+//				estimate_old.y = estimate.y;
+//				tickOld = tick;
+//				firstRun = false;
+//				xC = -estimate.x;
+//				yC = -estimate.y;
+//			}
+//		}
+//		if (!firstRun && (position.timestamp==tick)) {
+//			if ((fabs(position.x-estimate.x)<3000.0) && (fabs(position.y-estimate.y)<3000.0)) {
+//				sumX = 0;
+//				sumY = 0;
+//				for (int i=0;i<N-1;i++) {
+//					prevX[i] = prevX[i+1];
+//					prevY[i] = prevY[i+1];
+//					sumX += prevX[i+1];
+//					sumY += prevY[i+1];
+//				}
+//				prevX[N-1] = position.x;
+//				prevY[N-1] = position.y;
+//				sumX += position.x;
+//				sumY += position.y;
+//
+//				estimate.x = (float) sumX/N;
+//				estimate.y = (float) sumY/N;
+//				vel.x = (float) ((estimate.x - estimate_old.x)*1000/(tick-tickOld));
+//				vel.y = (float) (estimate.y - estimate_old.y)*1000/(tick-tickOld);
+//				estimate_old.x = estimate.x;
+//				estimate_old.y = estimate.y;
+//				tickOld = tick;
+//			}
+//		}
+//		if (!firstRun) {
+//			setpoint.attitude.pitch = kp*(estimate.x) + kd*(vel.x);
+//			setpoint.attitude.roll = kp*(-estimate.y) + kd*(-vel.y);;
+//		}
 
-		//		if (position.timestamp==tick) {
-		//			estimate.x = estimate.x + alpha * (position.x - estimate.x);
-		//			n++;
-		//		}
+		static float phi, theta, psi;
+		phi = state.attitude.roll * DEG_TO_RAD;
+		theta = state.attitude.pitch * DEG_TO_RAD;
+		psi = state.attitude.yaw * DEG_TO_RAD;
 
-		if (firstRun && (position.timestamp==tick)) {
-			//			estimate.x = position.x;
-			//			estimate.y = position.y;
-			prevX[n] = position.x;
-			sumX += position.x;
-			prevY[n] = position.y;
-			sumY += position.y;
-			n++;
-			if (n==N) {
-				estimate.x = (float) sumX/N;
-				estimate.y = (float) sumY/N;
-				estimate_old.x = estimate.x;
-				estimate_old.y = estimate.y;
-				tickOld = tick;
-				firstRun = false;
-				xC = -estimate.x;
-				yC = -estimate.y;
-			}
-		}
-		if (!firstRun && (position.timestamp==tick)) {
-			if ((fabs(position.x-estimate.x)<3000.0) && (fabs(position.y-estimate.y)<3000.0)) {
-				//estimate.x += (float) ((position.x - prevX[0])/N);
-				//estimate.y += (float) ((position.y - prevY[0])/N);
-				//position.z = fabs(position.x-estimate.x);
-				//vel.x = (float) (estimate.x - estimate_old.x);
-				//vel.y = (float) (estimate.y - estimate_old.y);
-				sumX = 0;
-				sumY = 0;
-				for (int i=0;i<N-1;i++) {
-					prevX[i] = prevX[i+1];
-					prevY[i] = prevY[i+1];
-					sumX += prevX[i+1];
-					sumY += prevY[i+1];
-				}
-				prevX[N-1] = position.x;
-				prevY[N-1] = position.y;
-				sumX += position.x;
-				sumY += position.y;
+//		static float R_ned2b[3][3];
+//		static arm_matrix_instance_f32 R_ned2bm = {3, 3, (float *)R_ned2b};
+		static float R_b2ned[3][3];
+		static arm_matrix_instance_f32 R_b2nedm = {3, 3, (float *)R_b2ned};
+		R_b2ned[0][0] = cos(theta)*cos(psi);
+		R_b2ned[0][1] = sin(phi)*sin(theta)*cos(psi)-cos(phi)*sin(psi);
+		R_b2ned[0][2] = cos(phi)*sin(theta)*cos(psi)+sin(phi)*sin(psi);
+		R_b2ned[1][0] = cos(theta)*sin(psi);
+		R_b2ned[1][1] = sin(phi)*sin(theta)*sin(psi)+cos(phi)*cos(psi);
+		R_b2ned[1][2] = cos(phi)*sin(theta)*sin(psi)-sin(phi)*cos(psi);
+		R_b2ned[2][0] = -sin(theta);
+		R_b2ned[2][1] = sin(phi)*cos(theta);
+		R_b2ned[2][2] = cos(phi)*cos(theta);
+//		mat_trans(&R_ned2bm, &R_b2nedm);
 
-				estimate.x = (float) sumX/N;
-				estimate.y = (float) sumY/N;
-				vel.x = (float) ((estimate.x - estimate_old.x)*1000/(tick-tickOld));
-				vel.y = (float) (estimate.y - estimate_old.y)*1000/(tick-tickOld);
-				estimate_old.x = estimate.x;
-				estimate_old.y = estimate.y;
-				tickOld = tick;
-				//			estimate.x = alpha * estimate.x + (1.0f - alpha) * position.x;
-				//			estimate.y = alpha * estimate.y + (1.0f - alpha) * position.y;
-			}
-		}
-		if (!firstRun) {
-			setpoint.attitude.pitch = kp*(estimate.x) + kd*(vel.x);
-			setpoint.attitude.roll = kp*(-estimate.y) + kd*(-vel.y);;
-		}
+		static float P_b[3];
+		static arm_matrix_instance_f32 P_bm = {3, 1, (float *)P_b};
+		P_b[0] = position.x;
+		P_b[1] = position.y;
+		P_b[2] = position.z;
+		static float P_ned[3];
+		static arm_matrix_instance_f32 P_nedm = {3, 1, (float *)P_ned};
+		mat_mult(&R_b2nedm, &P_bm, &P_nedm);
+		estimate.x = P_ned[0];
+		estimate.y = P_ned[1];
+		estimate.z = P_ned[2];
+
+		setpoint.attitude.pitch = kp*(estimate.x);// + kd*(vel.x);
+		setpoint.attitude.roll = kp*(-estimate.y);// + kd*(-vel.y);;
 
 		sitAwUpdateSetpoint(&setpoint, &sensorData, &state);
 
@@ -267,13 +293,16 @@ LOG_ADD(LOG_FLOAT, z, &sensorData.mag.z)
 LOG_GROUP_STOP(mag)
 
 LOG_GROUP_START(position)
-LOG_ADD(LOG_FLOAT, x, &position.x)
-LOG_ADD(LOG_FLOAT, y, &position.y)
-LOG_ADD(LOG_FLOAT, tick, &tickOld)
-LOG_ADD(LOG_FLOAT, estimateX, &estimate.x)
-LOG_ADD(LOG_FLOAT, estimateY, &estimate.y)
-LOG_ADD(LOG_FLOAT, velX, &vel.x)
-LOG_ADD(LOG_FLOAT, velY, &vel.y)
+LOG_ADD(LOG_FLOAT, xb, &position.x)
+LOG_ADD(LOG_FLOAT, yb, &position.y)
+LOG_ADD(LOG_FLOAT, zb, &position.z)
+LOG_ADD(LOG_FLOAT, x, &estimate.x)
+LOG_ADD(LOG_FLOAT, y, &estimate.y)
+LOG_ADD(LOG_FLOAT, z, &estimate.z)
+//LOG_ADD(LOG_FLOAT, estimateX, &estimate.x)
+//LOG_ADD(LOG_FLOAT, estimateY, &estimate.y)
+//LOG_ADD(LOG_FLOAT, velX, &vel.x)
+//LOG_ADD(LOG_FLOAT, velY, &vel.y)
 LOG_ADD(LOG_UINT32, tick, &position.timestamp)
 LOG_GROUP_STOP(position)
 
