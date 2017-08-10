@@ -86,6 +86,13 @@ static float alpha = 0.93f;
 //static uint8_t makeCenter = 1;
 #define N 100
 
+#define ATTITUDE_UPDATE_RATE RATE_500_HZ
+#define ATTITUDE_UPDATE_DT 1.0/ATTITUDE_UPDATE_RATE
+
+#define POS_UPDATE_RATE RATE_1000_HZ
+#define POS_UPDATE_DT 1.0/POS_UPDATE_RATE
+
+
 static void stabilizerTask(void* param);
 
 void stabilizerInit(void)
@@ -143,6 +150,44 @@ static void stabilizerTask(void* param)
 		vTaskDelayUntil(&lastWakeTime, F2T(RATE_MAIN_LOOP));
 	}
 
+	static float Ax[2][2];
+	static arm_matrix_instance_f32 Axm = {2, 2, (float *)Ax};
+	Ax[0][0] = 1.0;
+	Ax[0][1] = ATTITUDE_UPDATE_DT;
+	Ax[1][0] = 0.0;
+	Ax[1][1] = 1.0;
+
+	static float Bx[2];
+	static arm_matrix_instance_f32 Bxm = {2, 1, (float *)Bx};
+	Bx[0] = 0.5*ATTITUDE_UPDATE_DT*ATTITUDE_UPDATE_DT;
+	Bx[1] = ATTITUDE_UPDATE_DT;
+
+	static float Hx[2];
+	static arm_matrix_instance_f32 Hxm = {1, 2, (float *)Hx};
+	Hx[0] = 1.0;
+	Hx[1] = 0.0;
+
+	static float Qx[2][2];
+	static arm_matrix_instance_f32 Qxm = {2, 2, (float *)Qx};
+	Qx[0][0] = 8.4444e-4*8.4444e-4;
+	Qx[0][1] = 0.0;
+	Qx[1][0] = 0.0;
+	Qx[1][1] = 8.4444e-4*8.4444e-4;
+
+	static float Rx;
+	static arm_matrix_instance_f32 Rxm = {1, 1, (float *)Rx};
+	Rx = 1.1229*1.1229;
+
+	static float current_state_estimate[2][1];
+	static arm_matrix_instance_f32 current_state_estimatem = {2, 1, (float *)current_state_estimate};
+	current_state_estimate[0][0] = 0.0;
+	current_state_estimate[1][0] = 0.0;
+
+	static float predicted_state_estimate[2][1];
+	static arm_matrix_instance_f32 predicted_state_estimatem = {2, 1, (float *)predicted_state_estimate};
+	predicted_state_estimate[0][0] = 0.0;
+	predicted_state_estimate[1][0] = 0.0;
+
 	while(1) {
 		vTaskDelayUntil(&lastWakeTime, F2T(RATE_MAIN_LOOP));
 
@@ -157,10 +202,10 @@ static void stabilizerTask(void* param)
 
 		commanderGetSetpoint(&setpoint, &state);
 
-		if (vl53l0xReadPosition(&position, tick)) {
+//		if (vl53l0xReadPosition(&position, tick)) {
 //			position.x += xC;
 //			position.y += yC;
-		}
+//		}
 
 //		if (firstRun && (position.timestamp==tick)) {
 //			prevX[n] = position.x;
@@ -208,6 +253,9 @@ static void stabilizerTask(void* param)
 //			setpoint.attitude.roll = kp*(-estimate.y) + kd*(-vel.y);;
 //		}
 
+		vl53l0xReadPosition(&position, tick);
+		if (RATE_DO_EXECUTE(POS_UPDATE_RATE, tick)) {
+
 		static float phi, theta, psi;
 		phi = state.attitude.roll * DEG_TO_RAD;
 		theta = state.attitude.pitch * DEG_TO_RAD;
@@ -239,6 +287,34 @@ static void stabilizerTask(void* param)
 		estimate.x = P_ned[0];
 		estimate.y = P_ned[1];
 		estimate.z = P_ned[2];
+
+		static float acc_b[3];
+		static arm_matrix_instance_f32 acc_bm = {3, 1, (float *)acc_b};
+		acc_b[0] = sensorData.acc.x;
+		acc_b[1] = sensorData.acc.y;
+		acc_b[2] = sensorData.acc.z;
+		static float acc_ned[3];
+		static arm_matrix_instance_f32 acc_nedm = {3, 1, (float *)acc_ned};
+		mat_mult(&R_b2nedm, &acc_bm, &acc_nedm);
+
+		static float control_vectorx;
+		static arm_matrix_instance_f32 control_vectorxm = {1, 1, (float *)control_vectorx};
+		control_vectorx = acc_ned[0];
+
+		//---------------------------Prediction step-----------------------------
+		static float tempA[2];
+		static arm_matrix_instance_f32 tempAm = {2, 1, (float *)tempA};
+		mat_mult(&Axm, &current_state_estimatem, &tempAm);
+
+		//predicted_state_estimate = self.A * self.current_state_estimate + self.B * control_vector
+		//predicted_prob_estimate = (self.A * self.current_prob_estimate) * numpy.transpose(self.A) + self.Q
+		//--------------------------Observation step-----------------------------
+		//innovation = measurement_vector - self.H*predicted_state_estimate
+		//innovation_covariance = self.H*predicted_prob_estimate*numpy.transpose(self.H) + self.R
+    	//#-----------------------------Update step-------------------------------
+		//kalman_gain = predicted_prob_estimate * numpy.transpose(self.H) * numpy.linalg.inv(innovation_covariance)
+		//self.current_state_estimate = predicted_state_estimate + kalman_gain * innovation
+		}
 
 		setpoint.attitude.pitch = kp*(estimate.x);// + kd*(vel.x);
 		setpoint.attitude.roll = kp*(-estimate.y);// + kd*(-vel.y);;
