@@ -66,7 +66,7 @@ static sensorData_t sensorData;
 static state_t state;
 static control_t control;
 //
-extern bool altHoldMode;
+//extern bool altHoldMode;
 #define RANGE_OUTLIER_LIMIT 3000 // the measured range is in [mm]
 extern uint16_t range_last2[6];
 //static uint8_t Linear = 1, nonLinear = 0;
@@ -150,43 +150,43 @@ static void stabilizerTask(void* param)
 		vTaskDelayUntil(&lastWakeTime, F2T(RATE_MAIN_LOOP));
 	}
 
-	static float Ax[2][2];
-	static arm_matrix_instance_f32 Axm = {2, 2, (float *)Ax};
-	Ax[0][0] = 1.0;
-	Ax[0][1] = ATTITUDE_UPDATE_DT;
-	Ax[1][0] = 0.0;
-	Ax[1][1] = 1.0;
-
-	static float Bx[2];
-	static arm_matrix_instance_f32 Bxm = {2, 1, (float *)Bx};
-	Bx[0] = 0.5*ATTITUDE_UPDATE_DT*ATTITUDE_UPDATE_DT;
-	Bx[1] = ATTITUDE_UPDATE_DT;
-
-	static float Hx[2];
-	static arm_matrix_instance_f32 Hxm = {1, 2, (float *)Hx};
-	Hx[0] = 1.0;
-	Hx[1] = 0.0;
-
-	static float Qx[2][2];
-	static arm_matrix_instance_f32 Qxm = {2, 2, (float *)Qx};
-	Qx[0][0] = 8.4444e-4*8.4444e-4;
-	Qx[0][1] = 0.0;
-	Qx[1][0] = 0.0;
-	Qx[1][1] = 8.4444e-4*8.4444e-4;
-
-	static float Rx;
-	static arm_matrix_instance_f32 Rxm = {1, 1, (float *)Rx};
-	Rx = 1.1229*1.1229;
-
-	static float current_state_estimate[2][1];
-	static arm_matrix_instance_f32 current_state_estimatem = {2, 1, (float *)current_state_estimate};
-	current_state_estimate[0][0] = 0.0;
-	current_state_estimate[1][0] = 0.0;
-
-	static float predicted_state_estimate[2][1];
-	static arm_matrix_instance_f32 predicted_state_estimatem = {2, 1, (float *)predicted_state_estimate};
-	predicted_state_estimate[0][0] = 0.0;
-	predicted_state_estimate[1][0] = 0.0;
+//	static float Ax[2][2];
+//	static arm_matrix_instance_f32 Axm = {2, 2, (float *)Ax};
+//	Ax[0][0] = 1.0;
+//	Ax[0][1] = ATTITUDE_UPDATE_DT;
+//	Ax[1][0] = 0.0;
+//	Ax[1][1] = 1.0;
+//
+//	static float Bx[2];
+//	static arm_matrix_instance_f32 Bxm = {2, 1, (float *)Bx};
+//	Bx[0] = 0.5*ATTITUDE_UPDATE_DT*ATTITUDE_UPDATE_DT;
+//	Bx[1] = ATTITUDE_UPDATE_DT;
+//
+//	static float Hx[2];
+//	static arm_matrix_instance_f32 Hxm = {1, 2, (float *)Hx};
+//	Hx[0] = 1.0;
+//	Hx[1] = 0.0;
+//
+//	static float Qx[2][2];
+//	static arm_matrix_instance_f32 Qxm = {2, 2, (float *)Qx};
+//	Qx[0][0] = 8.4444e-4*8.4444e-4;
+//	Qx[0][1] = 0.0;
+//	Qx[1][0] = 0.0;
+//	Qx[1][1] = 8.4444e-4*8.4444e-4;
+//
+//	static float Rx;
+//	static arm_matrix_instance_f32 Rxm = {1, 1, (float *)Rx};
+//	Rx = 1.1229*1.1229;
+//
+//	static float current_state_estimate[2][1];
+//	static arm_matrix_instance_f32 current_state_estimatem = {2, 1, (float *)current_state_estimate};
+//	current_state_estimate[0][0] = 0.0;
+//	current_state_estimate[1][0] = 0.0;
+//
+//	static float predicted_state_estimate[2][1];
+//	static arm_matrix_instance_f32 predicted_state_estimatem = {2, 1, (float *)predicted_state_estimate};
+//	predicted_state_estimate[0][0] = 0.0;
+//	predicted_state_estimate[1][0] = 0.0;
 
 	while(1) {
 		vTaskDelayUntil(&lastWakeTime, F2T(RATE_MAIN_LOOP));
@@ -297,14 +297,14 @@ static void stabilizerTask(void* param)
 		static arm_matrix_instance_f32 acc_nedm = {3, 1, (float *)acc_ned};
 		mat_mult(&R_b2nedm, &acc_bm, &acc_nedm);
 
-		static float control_vectorx;
-		static arm_matrix_instance_f32 control_vectorxm = {1, 1, (float *)control_vectorx};
-		control_vectorx = acc_ned[0];
-
-		//---------------------------Prediction step-----------------------------
-		static float tempA[2];
-		static arm_matrix_instance_f32 tempAm = {2, 1, (float *)tempA};
-		mat_mult(&Axm, &current_state_estimatem, &tempAm);
+//		static float control_vectorx;
+//		static arm_matrix_instance_f32 control_vectorxm = {1, 1, (float *)control_vectorx};
+//		control_vectorx = acc_ned[0];
+//
+//		//---------------------------Prediction step-----------------------------
+//		static float tempA[2];
+//		static arm_matrix_instance_f32 tempAm = {2, 1, (float *)tempA};
+//		mat_mult(&Axm, &current_state_estimatem, &tempAm);
 
 		//predicted_state_estimate = self.A * self.current_state_estimate + self.B * control_vector
 		//predicted_prob_estimate = (self.A * self.current_prob_estimate) * numpy.transpose(self.A) + self.Q
