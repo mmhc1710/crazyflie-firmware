@@ -65,6 +65,15 @@ void zRangerInit(DeckInfo* info)
   if (isInit)
     return;
 
+	pinMode(DECK_GPIO_IO1, OUTPUT);
+	pinMode(DECK_GPIO_IO2, OUTPUT);
+	pinMode(DECK_GPIO_IO3, OUTPUT);
+	pinMode(DECK_GPIO_IO4, OUTPUT);
+	digitalWrite(DECK_GPIO_IO4, HIGH);
+	digitalWrite(DECK_GPIO_IO1, LOW);
+	digitalWrite(DECK_GPIO_IO2, LOW);
+	digitalWrite(DECK_GPIO_IO3, LOW);
+
   vl53l0xInit(&dev, I2C1_DEV, true);
 
   xTaskCreate(zRangerTask, ZRANGER_TASK_NAME, ZRANGER_TASK_STACKSIZE, NULL, ZRANGER_TASK_PRI, NULL);
@@ -134,7 +143,7 @@ static const DeckDriver zranger_deck = {
   .vid = 0xBC,
   .pid = 0x09,
   .name = "bcZRanger",
-  .usedGpio = 0x0C,
+  .usedGpio = DECK_GPIO_IO1 | DECK_GPIO_IO2 | DECK_GPIO_IO3 | DECK_GPIO_IO4,
 
   .init = zRangerInit,
   .test = zRangerTest,
