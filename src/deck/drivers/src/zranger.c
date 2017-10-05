@@ -55,6 +55,7 @@ static float expCoeff;
 #define RANGE_OUTLIER_LIMIT 3000 // the measured range is in [mm]
 
 uint16_t range_last = 0;
+uint16_t range_last2[6] = {0,0,0,0,0,0};
 
 bool isInit;
 
@@ -69,12 +70,22 @@ void zRangerInit(DeckInfo* info)
 	pinMode(DECK_GPIO_IO2, OUTPUT);
 	pinMode(DECK_GPIO_IO3, OUTPUT);
 	pinMode(DECK_GPIO_IO4, OUTPUT);
+
+	digitalWrite(DECK_GPIO_IO4, LOW);
+	for (int i=0; i<=4; i++){
+		digitalWrite(DECK_GPIO_IO1, ((i&0b00000001)>>0));
+		digitalWrite(DECK_GPIO_IO2, ((i&0b00000010)>>1));
+		digitalWrite(DECK_GPIO_IO3, ((i&0b00000100)>>2));
+		vl53l0xInit(&dev, I2C1_DEV, true);
+		if (1) DEBUG_PRINT("[%d] Initialization test [OK]\n", i);
+	}
+
 	digitalWrite(DECK_GPIO_IO4, HIGH);
 	digitalWrite(DECK_GPIO_IO1, LOW);
 	digitalWrite(DECK_GPIO_IO2, LOW);
 	digitalWrite(DECK_GPIO_IO3, LOW);
-
-  vl53l0xInit(&dev, I2C1_DEV, true);
+	vl53l0xInit(&dev, I2C1_DEV, true);
+	if (1) DEBUG_PRINT("[%d] Initialization test [OK]\n", 5);
 
   xTaskCreate(zRangerTask, ZRANGER_TASK_NAME, ZRANGER_TASK_STACKSIZE, NULL, ZRANGER_TASK_PRI, NULL);
 
@@ -106,7 +117,23 @@ void zRangerTask(void* arg)
   vl53l0xStartContinuous(&dev, 0);
   while (1) {
     xLastWakeTime = xTaskGetTickCount();
-    range_last = vl53l0xReadRangeContinuousMillimeters(&dev);
+
+	digitalWrite(DECK_GPIO_IO4, LOW);
+	for (int i=0; i<=4; i++){
+		digitalWrite(DECK_GPIO_IO1, ((i&0b00000001)>>0));
+		digitalWrite(DECK_GPIO_IO2, ((i&0b00000010)>>1));
+		digitalWrite(DECK_GPIO_IO3, ((i&0b00000100)>>2));
+		range_last2[i] = vl53l0xReadRangeSingleMillimeters(&dev);
+		//  	  range_last = vl53l0xReadRangeContinuousMillimeters();
+	}
+	digitalWrite(DECK_GPIO_IO4, HIGH);
+	digitalWrite(DECK_GPIO_IO1, LOW);
+	digitalWrite(DECK_GPIO_IO2, LOW);
+	digitalWrite(DECK_GPIO_IO3, LOW);
+	range_last2[5] = vl53l0xReadRangeSingleMillimeters(&dev);
+	range_last = range_last2[5];
+
+//    range_last = vl53l0xReadRangeContinuousMillimeters(&dev);
 
     // check if range is feasible and push into the kalman filter
     // the sensor should not be able to measure >3 [m], and outliers typically
@@ -156,5 +183,11 @@ PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, bcZRanger, &isInit)
 PARAM_GROUP_STOP(deck)
 
 LOG_GROUP_START(range)
+LOG_ADD(LOG_UINT16, range1, &range_last2[0])
+LOG_ADD(LOG_UINT16, range2, &range_last2[1])
+LOG_ADD(LOG_UINT16, range3, &range_last2[2])
+LOG_ADD(LOG_UINT16, range4, &range_last2[3])
+LOG_ADD(LOG_UINT16, range5, &range_last2[4])
+LOG_ADD(LOG_UINT16, range6, &range_last2[5])
 LOG_ADD(LOG_UINT16, zrange, &range_last)
 LOG_GROUP_STOP(range)
