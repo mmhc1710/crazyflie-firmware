@@ -97,12 +97,25 @@ void zRangerInit(DeckInfo* info)
 
 bool zRangerTest(void)
 {
-  bool testStatus;
+  bool testStatus = true;
 
   if (!isInit)
     return false;
 
-  testStatus  = vl53l0xTestConnection(&dev);
+	for (int i=0; i<=4; i++){
+		digitalWrite(DECK_GPIO_IO1, ((i&0b00000001)>>0));
+		digitalWrite(DECK_GPIO_IO2, ((i&0b00000010)>>1));
+		digitalWrite(DECK_GPIO_IO3, ((i&0b00000100)>>2));
+		testStatus  &= vl53l0xTestConnection(&dev);
+		if (1) DEBUG_PRINT("[%d] test [OK]\n", i);
+	}
+
+	digitalWrite(DECK_GPIO_IO4, HIGH);
+	digitalWrite(DECK_GPIO_IO1, LOW);
+	digitalWrite(DECK_GPIO_IO2, LOW);
+	digitalWrite(DECK_GPIO_IO3, LOW);
+	testStatus  &= vl53l0xTestConnection(&dev);
+	if (1) DEBUG_PRINT("[%d] test [OK]\n", 5);
 
   return testStatus;
 }
@@ -188,6 +201,6 @@ LOG_ADD(LOG_UINT16, range2, &range_last2[1])
 LOG_ADD(LOG_UINT16, range3, &range_last2[2])
 LOG_ADD(LOG_UINT16, range4, &range_last2[3])
 LOG_ADD(LOG_UINT16, range5, &range_last2[4])
-LOG_ADD(LOG_UINT16, range6, &range_last2[5])
+//LOG_ADD(LOG_UINT16, range6, &range_last2[5])
 LOG_ADD(LOG_UINT16, zrange, &range_last)
 LOG_GROUP_STOP(range)

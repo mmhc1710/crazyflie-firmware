@@ -56,6 +56,10 @@ static control_t control;
 
 static void stabilizerTask(void* param);
 
+//extern uint16_t range_last2[6];
+//static uint16_t thresh_dist = 300;
+//static float kp = 0.02f;
+
 void stabilizerInit(StateEstimatorType estimator)
 {
   if(isInit)
@@ -128,6 +132,11 @@ static void stabilizerTask(void* param)
     stateEstimator(&state, &sensorData, &control, tick);
 
     commanderGetSetpoint(&setpoint, &state);
+
+//    if (range_last2[1] < thresh_dist) setpoint.attitude.pitch = kp*(thresh_dist-range_last2[1]); else setpoint.attitude.pitch = 0.0;
+//	if (range_last2[3] < thresh_dist) setpoint.attitude.pitch = -kp*(thresh_dist-range_last2[3]); else setpoint.attitude.pitch = 0.0;
+//	if (range_last2[2] < thresh_dist) setpoint.attitude.roll = -kp*(thresh_dist-range_last2[2]); else setpoint.attitude.roll = 0.0;
+//	if (range_last2[4] < thresh_dist) setpoint.attitude.roll = kp*(thresh_dist-range_last2[4]); else setpoint.attitude.roll = 0.0;
 
     sitAwUpdateSetpoint(&setpoint, &sensorData, &state);
 
@@ -215,11 +224,16 @@ LOG_ADD(LOG_FLOAT, z, &sensorData.mag.z)
 LOG_GROUP_STOP(mag)
 
 LOG_GROUP_START(controller)
-LOG_ADD(LOG_INT16, ctr_yaw, &control.yaw)
+//LOG_ADD(LOG_INT16, ctr_yaw, &control.yaw)
 LOG_GROUP_STOP(controller)
 
 LOG_GROUP_START(stateEstimate)
-LOG_ADD(LOG_FLOAT, x, &state.position.x)
-LOG_ADD(LOG_FLOAT, y, &state.position.y)
-LOG_ADD(LOG_FLOAT, z, &state.position.z)
+//LOG_ADD(LOG_FLOAT, x, &state.position.x)
+//LOG_ADD(LOG_FLOAT, y, &state.position.y)
+//LOG_ADD(LOG_FLOAT, z, &state.position.z)
 LOG_GROUP_STOP(stateEstimate)
+
+PARAM_GROUP_START(posCtlPid)
+//PARAM_ADD(PARAM_FLOAT, kp, &kp)
+//PARAM_ADD(PARAM_UINT16, thresh_dist, &thresh_dist)
+PARAM_GROUP_STOP(posCtlPid)
