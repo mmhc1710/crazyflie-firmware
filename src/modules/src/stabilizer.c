@@ -78,14 +78,14 @@ static point_t estimate;
 //static point_t estimate_old;
 //static velocity_t vel;
 static float kp = 0.01f;
-static float kd = 0.000f;
-static float xC = 0.0f;
-static float yC = 0.0f;
-static float alpha = 0.93f;
+//static float kd = 0.000f;
+//static float xC = 0.0f;
+//static float yC = 0.0f;
+//static float alpha = 0.93f;
 //static uint32_t tickOld = 0;
 //static uint8_t makeCenter = 1;
 #define N 100
-static uint16_t thresh_dist = 100;
+static uint16_t thresh_dist = 200;
 
 #define ATTITUDE_UPDATE_RATE RATE_500_HZ
 #define ATTITUDE_UPDATE_DT 1.0/ATTITUDE_UPDATE_RATE
@@ -212,13 +212,15 @@ static void stabilizerTask(void* param)
 
 		}
 
-		setpoint.attitude.pitch = kp*(estimate.x);// + kd*(vel.x);
-		setpoint.attitude.roll = kp*(-estimate.y);// + kd*(-vel.y);;
+//		setpoint.attitude.pitch = kp*(estimate.x);// + kd*(vel.x);
+//		setpoint.attitude.roll = kp*(-estimate.y);// + kd*(-vel.y);;
 
-		if (range_last2[1] < thresh_dist) setpoint.attitude.pitch = kp*(thresh_dist-range_last2[1]); else setpoint.attitude.pitch = 0.0;
-		if (range_last2[3] < thresh_dist) setpoint.attitude.pitch = -kp*(thresh_dist-range_last2[3]); else setpoint.attitude.pitch = 0.0;
-		if (range_last2[2] < thresh_dist) setpoint.attitude.roll = -kp*(thresh_dist-range_last2[2]); else setpoint.attitude.roll = 0.0;
-		if (range_last2[4] < thresh_dist) setpoint.attitude.roll = kp*(thresh_dist-range_last2[4]); else setpoint.attitude.roll = 0.0;
+		if (range_last2[1] < thresh_dist) setpoint.attitude.pitch = kp*(thresh_dist-range_last2[1]);
+		if (range_last2[3] < thresh_dist) setpoint.attitude.pitch = -kp*(thresh_dist-range_last2[3]);
+//		else setpoint.attitude.pitch = 0.0;
+		if (range_last2[2] < thresh_dist) setpoint.attitude.roll = -kp*(thresh_dist-range_last2[2]);
+		if (range_last2[4] < thresh_dist) setpoint.attitude.roll = kp*(thresh_dist-range_last2[4]);
+//		else setpoint.attitude.roll = 0.0;
 
 		sitAwUpdateSetpoint(&setpoint, &sensorData, &state);
 
@@ -270,12 +272,12 @@ LOG_ADD(LOG_FLOAT, z, &sensorData.mag.z)
 LOG_GROUP_STOP(mag)
 
 LOG_GROUP_START(position)
-LOG_ADD(LOG_FLOAT, xb, &position.x)
-LOG_ADD(LOG_FLOAT, yb, &position.y)
-LOG_ADD(LOG_FLOAT, zb, &position.z)
-LOG_ADD(LOG_FLOAT, x, &estimate.x)
-LOG_ADD(LOG_FLOAT, y, &estimate.y)
-LOG_ADD(LOG_FLOAT, z, &estimate.z)
+//LOG_ADD(LOG_FLOAT, xb, &position.x)
+//LOG_ADD(LOG_FLOAT, yb, &position.y)
+//LOG_ADD(LOG_FLOAT, zb, &position.z)
+//LOG_ADD(LOG_FLOAT, x, &estimate.x)
+//LOG_ADD(LOG_FLOAT, y, &estimate.y)
+//LOG_ADD(LOG_FLOAT, z, &estimate.z)
 //LOG_ADD(LOG_FLOAT, estimateX, &estimate.x)
 //LOG_ADD(LOG_FLOAT, estimateY, &estimate.y)
 //LOG_ADD(LOG_FLOAT, velX, &vel.x)
@@ -305,10 +307,10 @@ PARAM_GROUP_START(posCtlPid)
 //PARAM_ADD(PARAM_UINT8, nonLinear, &nonLinear)
 //PARAM_ADD(PARAM_FLOAT, nonLinearConst, &nonLinearConst)
 PARAM_ADD(PARAM_FLOAT, kp, &kp)
-PARAM_ADD(PARAM_FLOAT, kd, &kd)
-PARAM_ADD(PARAM_FLOAT, xC, &xC)
-PARAM_ADD(PARAM_FLOAT, yC, &yC)
-PARAM_ADD(PARAM_FLOAT, alpha, &alpha)
+//PARAM_ADD(PARAM_FLOAT, kd, &kd)
+//PARAM_ADD(PARAM_FLOAT, xC, &xC)
+//PARAM_ADD(PARAM_FLOAT, yC, &yC)
+//PARAM_ADD(PARAM_FLOAT, alpha, &alpha)
 //PARAM_ADD(PARAM_UINT8, makeCenter, &makeCenter)
 PARAM_ADD(PARAM_UINT16, thresh_dist, &thresh_dist)
 PARAM_GROUP_STOP(posCtlPid)
