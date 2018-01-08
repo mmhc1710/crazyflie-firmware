@@ -8,6 +8,8 @@
 
 ## Load a deck driver that has no OW memory
 # CFLAGS += -DDECK_FORCE=bcBuzzer
+# CFLAGS += -DDECK_FORCE=bcFlow
+ CFLAGS += -DDECK_FORCE=bcOA
 
 ## Enable biq quad deck features
 # CFLAGS += -DENABLE_BQ_DECK

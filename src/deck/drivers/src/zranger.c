@@ -54,7 +54,8 @@ static float expCoeff;
 
 #define RANGE_OUTLIER_LIMIT 3000 // the measured range is in [mm]
 
-static uint16_t range_last = 0;
+//static uint16_t range_last = 0;
+uint16_t range_last = 0;
 
 static bool isInit;
 
