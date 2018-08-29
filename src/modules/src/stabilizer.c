@@ -225,15 +225,15 @@ static void stabilizerTask(void* param)
 //			setpoint.attitude.roll = 0.0;
 //	if ((rangeLeft < thresh_dist) && isNeg(setpoint.attitude.roll))
 //			setpoint.attitude.roll = 0.0;
-
-	if ((rangeFront < thresh_dist) && isPos(setpoint.velocity.x))
-		setpoint.velocity.x = 0.0;
-	if ((rangeBack < thresh_dist) && isNeg(setpoint.velocity.x))
-			setpoint.velocity.x = 0.0;
-	if ((rangeRight < thresh_dist) && isNeg(setpoint.velocity.y))
-			setpoint.velocity.y = 0.0;
-	if ((rangeLeft < thresh_dist) && isPos(setpoint.velocity.y))
-			setpoint.velocity.y = 0.0;
+//
+//	if ((rangeFront < thresh_dist) && isPos(setpoint.velocity.x))
+//		setpoint.velocity.x = 0.0;
+//	if ((rangeBack < thresh_dist) && isNeg(setpoint.velocity.x))
+//			setpoint.velocity.x = 0.0;
+//	if ((rangeRight < thresh_dist) && isNeg(setpoint.velocity.y))
+//			setpoint.velocity.y = 0.0;
+//	if ((rangeLeft < thresh_dist) && isPos(setpoint.velocity.y))
+//			setpoint.velocity.y = 0.0;
 	// My stuff ends powerDistribution
 //    setpoint.mode.pitch = modeVelocity;
 //    setpoint.mode.roll = modeVelocity;

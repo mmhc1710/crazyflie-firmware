@@ -10,6 +10,7 @@
 # CFLAGS += -DDECK_FORCE=bcBuzzer
 # CFLAGS += -DDECK_FORCE=bcFlow
  CFLAGS += -DDECK_FORCE=bcOA
+ DEBUG=1
 
 ## Enable biq quad deck features
 # CFLAGS += -DENABLE_BQ_DECK
