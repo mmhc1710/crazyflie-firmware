@@ -8,6 +8,8 @@
 
 ## Load a deck driver that has no OW memory
 # CFLAGS += -DDECK_FORCE=bcBuzzer
+CFLAGS += -DDECK_FORCE=bcOA
+DEBUG = 1
 
 ## Load multiple deck drivers that has no OW memory
 # CFLAGS += -DDECK_FORCE=bcBuzzer:bcLedRing
