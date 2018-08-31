@@ -63,18 +63,23 @@ extern uint16_t rangeRight;
 extern uint16_t rangeLeft;
 //extern uint16_t rangeUp;
 //extern uint16_t range_last;
-static float kp = 0.5f;
+static float kp = 1.0f;
 //static double ki = 0.0f;
 static float kd = 0.1f/1000.0f;
 static uint16_t threshold = 300;
-float err = 0.0f;
-float err_last = 0.0f;
+float errx = 0.0f;
+float errx_last = 0.0f;
+float erry = 0.0f;
+float erry_last = 0.0f;
 static float dt = 0.001f;
 static float dedt = 0.0f;
 //static bool inFlight = false;
+bool lonObstPrsnt = false;
 bool latObstPrsnt = false;
 static float speed_limit = 1.0;
 static bool OAEnabled = true;
+static float vx = 0.0f;
+static float z = 0.0f;
 
 
 //#define POS_UPDATE_RATE RATE_1000_HZ
@@ -276,30 +281,57 @@ static void stabilizerTask(void* param)
 //			setpoint.velocity.y = 0.0;
 
     if (OAEnabled) {
+    	//setpoint.velocity.x = vx;
+    	//setpoint.position.z = z;
 		if (rangeRight < threshold) {
-			err = ((float)threshold - rangeRight)/(float)threshold;
-			dedt = (err - err_last)/dt;
-			setpoint.velocity.y = kp * err + kd * dedt;
+			erry = ((float)threshold - rangeRight)/(float)threshold;
+			dedt = (erry - erry_last)/dt;
+			setpoint.velocity.y = kp * erry + kd * dedt;
 			setpoint.velocity.y = clip(setpoint.velocity.y, speed_limit);
-			err_last = err;
+			erry_last = erry;
 			latObstPrsnt = true;
 			}
 		else if (rangeLeft < threshold) {
-			err = -((float)threshold - rangeLeft)/(float)threshold;
-			dedt = (err - err_last)/dt;
-			setpoint.velocity.y = kp * err + kd * dedt;
+			erry = -((float)threshold - rangeLeft)/(float)threshold;
+			dedt = (erry - erry_last)/dt;
+			setpoint.velocity.y = kp * erry + kd * dedt;
 			setpoint.velocity.y = clip(setpoint.velocity.y, speed_limit);
-			err_last = err;
+			erry_last = erry;
 			latObstPrsnt = true;
 		}
 		else if (latObstPrsnt) {
 			setpoint.velocity.y = 0.0f;
-			err_last = 0.0;
+			erry_last = 0.0;
 			latObstPrsnt = false;
 		}
+
+		if (rangeFront < threshold) {
+			errx = ((float)threshold - rangeFront)/(float)threshold;
+			dedt = (errx - errx_last)/dt;
+			setpoint.velocity.x = kp * errx + kd * dedt;
+			setpoint.velocity.x = clip(setpoint.velocity.x, speed_limit);
+			errx_last = errx;
+			lonObstPrsnt = true;
+			}
+		else if (rangeBack < threshold) {
+			errx = -((float)threshold - rangeBack)/(float)threshold;
+			dedt = (errx - errx_last)/dt;
+			setpoint.velocity.x = kp * errx + kd * dedt;
+			setpoint.velocity.x = clip(setpoint.velocity.x, speed_limit);
+			errx_last = errx;
+			lonObstPrsnt = true;
+		}
+		else if (lonObstPrsnt) {
+			setpoint.velocity.x = 0.0f;
+			errx_last = 0.0;
+			lonObstPrsnt = false;
+		}
+		else if (!lonObstPrsnt) {
+		        setpoint.velocity.x = vx;
+		}
+
     }
-//    elif not latObstPrsnt:
-//        setpoint.velocity.y = cmd_vel_man.linear.y
+
     sitAwUpdateSetpoint(&setpoint, &sensorData, &state);
 
     stateController(&control, &setpoint, &sensorData, &state, tick);
@@ -421,6 +453,8 @@ PARAM_ADD(PARAM_UINT8, OAEnabled, &OAEnabled)
 PARAM_ADD(PARAM_FLOAT, speed_limit, &speed_limit)
 PARAM_ADD(PARAM_FLOAT, kp, &kp)
 PARAM_ADD(PARAM_FLOAT, kd, &kd)
+PARAM_ADD(PARAM_FLOAT, vx, &vx)
+PARAM_ADD(PARAM_FLOAT, z, &z)
 //PARAM_ADD(PARAM_FLOAT, ki, &ki)
 PARAM_ADD(PARAM_UINT16, threshold, &threshold)
 PARAM_GROUP_STOP(oa)
