@@ -63,8 +63,20 @@ extern uint16_t rangeRight;
 extern uint16_t rangeLeft;
 //extern uint16_t rangeUp;
 //extern uint16_t range_last;
-//static float kp = 0.01f;
-static uint16_t thresh_dist = 200;
+static float kp = 0.5f;
+//static double ki = 0.0f;
+static float kd = 0.1f/1000.0f;
+static uint16_t threshold = 300;
+float err = 0.0f;
+float err_last = 0.0f;
+static float dt = 0.001f;
+static float dedt = 0.0f;
+//static bool inFlight = false;
+bool latObstPrsnt = false;
+static float speed_limit = 1.0;
+static bool OAEnabled = true;
+
+
 //#define POS_UPDATE_RATE RATE_1000_HZ
 //#define POS_UPDATE_DT 1.0/POS_UPDATE_RATE
 //#include "math.h"
@@ -83,6 +95,16 @@ static uint16_t thresh_dist = 200;
 #define isNeg(x) (x<0)
 // My stuff ends
 
+
+float clip (float x, float limit)
+{
+    if (x >= limit)
+        return limit;
+    else if (x <= -limit)
+        return -limit;
+    else
+        return x;
+}
 
 void stabilizerInit(StateEstimatorType estimator)
 {
@@ -210,29 +232,29 @@ static void stabilizerTask(void* param)
 //    //		setpoint.attitude.pitch = kp*(estimate.x);// + kd*(vel.x);
 //    //		setpoint.attitude.roll = kp*(-estimate.y);// + kd*(-vel.y);;
 //
-//    		if (rangeFront < thresh_dist) setpoint.attitude.pitch = kp*(thresh_dist-rangeFront);
-//    		if (rangeBack < thresh_dist) setpoint.attitude.pitch = -kp*(thresh_dist-rangeBack);
+//    		if (rangeFront < threshold) setpoint.attitude.pitch = kp*(threshold-rangeFront);
+//    		if (rangeBack < threshold) setpoint.attitude.pitch = -kp*(threshold-rangeBack);
 //    //		else setpoint.attitude.pitch = 0.0;
-//    		if (rangeRight < thresh_dist) setpoint.attitude.roll = -kp*(thresh_dist-rangeRight);
-//    		if (rangeLeft < thresh_dist) setpoint.attitude.roll = kp*(thresh_dist-rangeLeft);
+//    		if (rangeRight < threshold) setpoint.attitude.roll = -kp*(threshold-rangeRight);
+//    		if (rangeLeft < threshold) setpoint.attitude.roll = kp*(threshold-rangeLeft);
 //    //		else setpoint.attitude.roll = 0.0;
 //
-//	if ((rangeFront < thresh_dist) && isNeg(setpoint.attitude.pitch))
+//	if ((rangeFront < threshold) && isNeg(setpoint.attitude.pitch))
 //		setpoint.attitude.pitch = 0.0;
-//	if ((rangeBack < thresh_dist) && isPos(setpoint.attitude.pitch))
+//	if ((rangeBack < threshold) && isPos(setpoint.attitude.pitch))
 //			setpoint.attitude.pitch = 0.0;
-//	if ((rangeRight < thresh_dist) && isPos(setpoint.attitude.roll))
+//	if ((rangeRight < threshold) && isPos(setpoint.attitude.roll))
 //			setpoint.attitude.roll = 0.0;
-//	if ((rangeLeft < thresh_dist) && isNeg(setpoint.attitude.roll))
+//	if ((rangeLeft < threshold) && isNeg(setpoint.attitude.roll))
 //			setpoint.attitude.roll = 0.0;
 //
-//	if ((rangeFront < thresh_dist) && isPos(setpoint.velocity.x))
+//	if ((rangeFront < threshold) && isPos(setpoint.velocity.x))
 //		setpoint.velocity.x = 0.0;
-//	if ((rangeBack < thresh_dist) && isNeg(setpoint.velocity.x))
+//	if ((rangeBack < threshold) && isNeg(setpoint.velocity.x))
 //			setpoint.velocity.x = 0.0;
-//	if ((rangeRight < thresh_dist) && isNeg(setpoint.velocity.y))
+//	if ((rangeRight < threshold) && isNeg(setpoint.velocity.y))
 //			setpoint.velocity.y = 0.0;
-//	if ((rangeLeft < thresh_dist) && isPos(setpoint.velocity.y))
+//	if ((rangeLeft < threshold) && isPos(setpoint.velocity.y))
 //			setpoint.velocity.y = 0.0;
 	// My stuff ends powerDistribution
 //    setpoint.mode.pitch = modeVelocity;
@@ -243,6 +265,41 @@ static void stabilizerTask(void* param)
 //	setpoint.attitudeRate.roll = 0.0;
 //    setpoint.velocity.x = 0.0;
 //    setpoint.velocity.y = 0.0;
+
+//	if ((rangeFront < threshold) && isPos(setpoint.velocity.x))
+//		setpoint.velocity.x = 0.0;
+//	if ((rangeBack < threshold) && isNeg(setpoint.velocity.x))
+//			setpoint.velocity.x = 0.0;
+//	if ((rangeRight < threshold) && isNeg(setpoint.velocity.y))
+//			setpoint.velocity.y = 0.0;
+//	if ((rangeLeft < threshold) && isPos(setpoint.velocity.y))
+//			setpoint.velocity.y = 0.0;
+
+    if (OAEnabled) {
+		if (rangeRight < threshold) {
+			err = ((float)threshold - rangeRight)/(float)threshold;
+			dedt = (err - err_last)/dt;
+			setpoint.velocity.y = kp * err + kd * dedt;
+			setpoint.velocity.y = clip(setpoint.velocity.y, speed_limit);
+			err_last = err;
+			latObstPrsnt = true;
+			}
+		else if (rangeLeft < threshold) {
+			err = -((float)threshold - rangeLeft)/(float)threshold;
+			dedt = (err - err_last)/dt;
+			setpoint.velocity.y = kp * err + kd * dedt;
+			setpoint.velocity.y = clip(setpoint.velocity.y, speed_limit);
+			err_last = err;
+			latObstPrsnt = true;
+		}
+		else if (latObstPrsnt) {
+			setpoint.velocity.y = 0.0f;
+			err_last = 0.0;
+			latObstPrsnt = false;
+		}
+    }
+//    elif not latObstPrsnt:
+//        setpoint.velocity.y = cmd_vel_man.linear.y
     sitAwUpdateSetpoint(&setpoint, &sensorData, &state);
 
     stateController(&control, &setpoint, &sensorData, &state, tick);
@@ -354,11 +411,17 @@ LOG_ADD(LOG_FLOAT, zT, &setpoint.position.z)
 LOG_ADD(LOG_FLOAT, vxT, &setpoint.velocity.x)
 LOG_ADD(LOG_FLOAT, vyT, &setpoint.velocity.y)
 LOG_ADD(LOG_FLOAT, vzT, &setpoint.velocity.z)
+//LOG_ADD(LOG_UINT16, rangeRight, &rangeRight)
+//LOG_ADD(LOG_FLOAT, err, &err)
 //LOG_ADD(LOG_FLOAT, z, &estimate.z)
 LOG_GROUP_STOP(stateEstimate)
 
 PARAM_GROUP_START(oa)
-//PARAM_ADD(PARAM_FLOAT, kp, &kp)
-PARAM_ADD(PARAM_UINT16, thresh_dist, &thresh_dist)
+PARAM_ADD(PARAM_UINT8, OAEnabled, &OAEnabled)
+PARAM_ADD(PARAM_FLOAT, speed_limit, &speed_limit)
+PARAM_ADD(PARAM_FLOAT, kp, &kp)
+PARAM_ADD(PARAM_FLOAT, kd, &kd)
+//PARAM_ADD(PARAM_FLOAT, ki, &ki)
+PARAM_ADD(PARAM_UINT16, threshold, &threshold)
 PARAM_GROUP_STOP(oa)
 // My stuff ends
