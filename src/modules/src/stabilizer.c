@@ -63,7 +63,7 @@ extern uint16_t rangeRight;
 extern uint16_t rangeLeft;
 //extern uint16_t rangeUp;
 //extern uint16_t range_last;
-static float kp = 1.0f;
+static float kp = 3.0f;
 //static double ki = 0.0f;
 static float kd = 0.1f/1000.0f;
 static uint16_t threshold = 300;
@@ -76,9 +76,9 @@ static float dedt = 0.0f;
 //static bool inFlight = false;
 bool lonObstPrsnt = false;
 bool latObstPrsnt = false;
-static float speed_limit = 1.0;
+static float speed_limit = 5.0;
 static bool OAEnabled = true;
-static float vx = 0.0f;
+static float vx = 0.0f; //0.2
 static float z = 0.0f;
 
 
@@ -306,7 +306,7 @@ static void stabilizerTask(void* param)
 		}
 
 		if (rangeFront < threshold) {
-			errx = ((float)threshold - rangeFront)/(float)threshold;
+			errx = -((float)threshold - rangeFront)/(float)threshold;
 			dedt = (errx - errx_last)/dt;
 			setpoint.velocity.x = kp * errx + kd * dedt;
 			setpoint.velocity.x = clip(setpoint.velocity.x, speed_limit);
@@ -314,7 +314,7 @@ static void stabilizerTask(void* param)
 			lonObstPrsnt = true;
 			}
 		else if (rangeBack < threshold) {
-			errx = -((float)threshold - rangeBack)/(float)threshold;
+			errx = ((float)threshold - rangeBack)/(float)threshold;
 			dedt = (errx - errx_last)/dt;
 			setpoint.velocity.x = kp * errx + kd * dedt;
 			setpoint.velocity.x = clip(setpoint.velocity.x, speed_limit);
@@ -430,23 +430,23 @@ LOG_GROUP_STOP(controller)
 //LOG_GROUP_STOP(stateEstimate)
 
 // My stuff starts
-LOG_GROUP_START(stateEstimate)
-LOG_ADD(LOG_FLOAT, x, &state.position.x)
-LOG_ADD(LOG_FLOAT, y, &state.position.y)
-LOG_ADD(LOG_FLOAT, z, &state.position.z)
-LOG_ADD(LOG_FLOAT, vx, &state.velocity.x)
-LOG_ADD(LOG_FLOAT, vy, &state.velocity.y)
-LOG_ADD(LOG_FLOAT, vz, &state.velocity.z)
-LOG_ADD(LOG_FLOAT, xT, &setpoint.position.x)
-LOG_ADD(LOG_FLOAT, yT, &setpoint.position.y)
-LOG_ADD(LOG_FLOAT, zT, &setpoint.position.z)
-LOG_ADD(LOG_FLOAT, vxT, &setpoint.velocity.x)
-LOG_ADD(LOG_FLOAT, vyT, &setpoint.velocity.y)
-LOG_ADD(LOG_FLOAT, vzT, &setpoint.velocity.z)
-//LOG_ADD(LOG_UINT16, rangeRight, &rangeRight)
-//LOG_ADD(LOG_FLOAT, err, &err)
-//LOG_ADD(LOG_FLOAT, z, &estimate.z)
-LOG_GROUP_STOP(stateEstimate)
+//LOG_GROUP_START(stateEstimate)
+//LOG_ADD(LOG_FLOAT, x, &state.position.x)
+//LOG_ADD(LOG_FLOAT, y, &state.position.y)
+//LOG_ADD(LOG_FLOAT, z, &state.position.z)
+//LOG_ADD(LOG_FLOAT, vx, &state.velocity.x)
+//LOG_ADD(LOG_FLOAT, vy, &state.velocity.y)
+//LOG_ADD(LOG_FLOAT, vz, &state.velocity.z)
+//LOG_ADD(LOG_FLOAT, xT, &setpoint.position.x)
+//LOG_ADD(LOG_FLOAT, yT, &setpoint.position.y)
+//LOG_ADD(LOG_FLOAT, zT, &setpoint.position.z)
+//LOG_ADD(LOG_FLOAT, vxT, &setpoint.velocity.x)
+//LOG_ADD(LOG_FLOAT, vyT, &setpoint.velocity.y)
+//LOG_ADD(LOG_FLOAT, vzT, &setpoint.velocity.z)
+////LOG_ADD(LOG_UINT16, rangeRight, &rangeRight)
+////LOG_ADD(LOG_FLOAT, err, &err)
+////LOG_ADD(LOG_FLOAT, z, &estimate.z)
+//LOG_GROUP_STOP(stateEstimate)
 
 PARAM_GROUP_START(oa)
 PARAM_ADD(PARAM_UINT8, OAEnabled, &OAEnabled)
