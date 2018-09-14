@@ -77,8 +77,8 @@ static float dedt = 0.0f;
 bool lonObstPrsnt = false;
 bool latObstPrsnt = false;
 static float speed_limit = 5.0;
-static bool OAEnabled = true;
-static float vx = 0.0f; //0.2
+static bool OAEnabled = false;
+static float vx = 0.2f; //0.2
 static float z = 0.0f;
 
 
