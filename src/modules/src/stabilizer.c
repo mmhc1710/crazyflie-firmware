@@ -190,57 +190,101 @@ static void stabilizerTask(void* param)
 
     commanderGetSetpoint(&setpoint, &state);
 
+//    if (OAEnabled) {
+//        	//setpoint.velocity.x = vx;
+//        	//setpoint.position.z = z;
+//    		if (rangeRight < threshold) {
+//    			erry = ((float)threshold - rangeRight)/(float)threshold;
+//    			dedt = (erry - erry_last)/dt;
+//    			setpoint.velocity.y = kp * erry + kd * dedt;
+//    			setpoint.velocity.y = clip(setpoint.velocity.y, speed_limit);
+//    			erry_last = erry;
+//    			latObstPrsnt = true;
+//    			}
+//    		else if (rangeLeft < threshold) {
+//    			erry = -((float)threshold - rangeLeft)/(float)threshold;
+//    			dedt = (erry - erry_last)/dt;
+//    			setpoint.velocity.y = kp * erry + kd * dedt;
+//    			setpoint.velocity.y = clip(setpoint.velocity.y, speed_limit);
+//    			erry_last = erry;
+//    			latObstPrsnt = true;
+//    		}
+//    		else if (latObstPrsnt) {
+//    			setpoint.velocity.y = 0.0f;
+//    			erry_last = 0.0;
+//    			latObstPrsnt = false;
+//    		}
+//
+//    		if (rangeFront < threshold) {
+//    			errx = -((float)threshold - rangeFront)/(float)threshold;
+//    			dedt = (errx - errx_last)/dt;
+//    			setpoint.velocity.x = kp * errx + kd * dedt;
+//    			setpoint.velocity.x = clip(setpoint.velocity.x, speed_limit);
+//    			errx_last = errx;
+//    			lonObstPrsnt = true;
+//    			}
+//    		else if (rangeBack < threshold) {
+//    			errx = ((float)threshold - rangeBack)/(float)threshold;
+//    			dedt = (errx - errx_last)/dt;
+//    			setpoint.velocity.x = kp * errx + kd * dedt;
+//    			setpoint.velocity.x = clip(setpoint.velocity.x, speed_limit);
+//    			errx_last = errx;
+//    			lonObstPrsnt = true;
+//    		}
+//    		else if (lonObstPrsnt) {
+//    			setpoint.velocity.x = 0.0f;
+//    			errx_last = 0.0;
+//    			lonObstPrsnt = false;
+//    		}
+//    		else if (!lonObstPrsnt) {
+//    		        setpoint.velocity.x = vx;
+//    		}
+//
+//        }
+
     if (OAEnabled) {
-        	//setpoint.velocity.x = vx;
-        	//setpoint.position.z = z;
-    		if (rangeRight < threshold) {
-    			erry = ((float)threshold - rangeRight)/(float)threshold;
-    			dedt = (erry - erry_last)/dt;
-    			setpoint.velocity.y = kp * erry + kd * dedt;
-    			setpoint.velocity.y = clip(setpoint.velocity.y, speed_limit);
-    			erry_last = erry;
-    			latObstPrsnt = true;
+            	//setpoint.velocity.x = vx;
+            	//setpoint.position.z = z;
+    			if ((rangeRight < threshold) && (rangeLeft < threshold)) {
+    				erry = (rangeLeft - rangeRight)/2000.0;
+    				dedt = (erry - erry_last)/dt;
+					setpoint.velocity.y = kp * erry + kd * dedt;
+					setpoint.velocity.y = clip(setpoint.velocity.y, speed_limit);
+					erry_last = erry;
+					latObstPrsnt = true;
     			}
-    		else if (rangeLeft < threshold) {
-    			erry = -((float)threshold - rangeLeft)/(float)threshold;
-    			dedt = (erry - erry_last)/dt;
-    			setpoint.velocity.y = kp * erry + kd * dedt;
-    			setpoint.velocity.y = clip(setpoint.velocity.y, speed_limit);
-    			erry_last = erry;
-    			latObstPrsnt = true;
-    		}
-    		else if (latObstPrsnt) {
-    			setpoint.velocity.y = 0.0f;
-    			erry_last = 0.0;
-    			latObstPrsnt = false;
-    		}
+        		else if (latObstPrsnt) {
+        			setpoint.velocity.y = 0.0f;
+        			erry_last = 0.0;
+        			latObstPrsnt = false;
+        		}
 
-    		if (rangeFront < threshold) {
-    			errx = -((float)threshold - rangeFront)/(float)threshold;
-    			dedt = (errx - errx_last)/dt;
-    			setpoint.velocity.x = kp * errx + kd * dedt;
-    			setpoint.velocity.x = clip(setpoint.velocity.x, speed_limit);
-    			errx_last = errx;
-    			lonObstPrsnt = true;
-    			}
-    		else if (rangeBack < threshold) {
-    			errx = ((float)threshold - rangeBack)/(float)threshold;
-    			dedt = (errx - errx_last)/dt;
-    			setpoint.velocity.x = kp * errx + kd * dedt;
-    			setpoint.velocity.x = clip(setpoint.velocity.x, speed_limit);
-    			errx_last = errx;
-    			lonObstPrsnt = true;
-    		}
-    		else if (lonObstPrsnt) {
-    			setpoint.velocity.x = 0.0f;
-    			errx_last = 0.0;
-    			lonObstPrsnt = false;
-    		}
-    		else if (!lonObstPrsnt) {
-    		        setpoint.velocity.x = vx;
-    		}
+        		if (rangeFront < threshold) {
+        			errx = -((float)threshold - rangeFront)/(float)threshold;
+        			dedt = (errx - errx_last)/dt;
+        			setpoint.velocity.x = kp * errx + kd * dedt;
+        			setpoint.velocity.x = clip(setpoint.velocity.x, speed_limit);
+        			errx_last = errx;
+        			lonObstPrsnt = true;
+        			}
+        		else if (rangeBack < threshold) {
+        			errx = ((float)threshold - rangeBack)/(float)threshold;
+        			dedt = (errx - errx_last)/dt;
+        			setpoint.velocity.x = kp * errx + kd * dedt;
+        			setpoint.velocity.x = clip(setpoint.velocity.x, speed_limit);
+        			errx_last = errx;
+        			lonObstPrsnt = true;
+        		}
+        		else if (lonObstPrsnt) {
+        			setpoint.velocity.x = 0.0f;
+        			errx_last = 0.0;
+        			lonObstPrsnt = false;
+        		}
+        		else if (!lonObstPrsnt) {
+        		        setpoint.velocity.x = vx;
+        		}
 
-        }
+            }
 
     sitAwUpdateSetpoint(&setpoint, &sensorData, &state);
 
