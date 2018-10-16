@@ -66,13 +66,14 @@ extern uint16_t rangeRight;
 extern uint16_t rangeLeft;
 //extern uint16_t rangeUp;
 //extern uint16_t range_last;
-static float lon_kp = 5.0f;
+static float lon_kp = 10.0f;
 //static double ki = 0.0f;
-static float lon_kd = 10.0f/1000.0f;
-static float lat_kp = 2.0f;
+static float lon_kd = 2.0f;
+static float lat_kp = 6.0f;
 //static double ki = 0.0f;
-static float lat_kd = 0.1f/1000.0f;
-static uint16_t threshold = 300;
+static float lat_kd = 0.1f;
+static uint16_t threshold_lon = 500;
+static uint16_t threshold_lat = 700;
 float errx = 0.0f;
 float errx_last = 0.0f;
 float erry = 0.0f;
@@ -86,6 +87,8 @@ static float speed_limit = 10.0;
 static bool OAEnabled = false;
 static float vx = 0.2f; //0.2
 //static float z = 0.0f;
+static float vx_kp = 0.0f;
+float errvx = 0.0f;
 
 float clip (float x, float limit)
 {
@@ -248,8 +251,8 @@ static void stabilizerTask(void* param)
     if (OAEnabled) {
             	//setpoint.velocity.x = vx;
             	//setpoint.position.z = z;
-    			if ((rangeRight < threshold) && (rangeLeft < threshold)) {
-    				erry = (rangeLeft - rangeRight)/2000.0;
+    			if ((rangeRight < threshold_lat) && (rangeLeft < threshold_lat)) {
+    				erry = (rangeLeft - rangeRight)/threshold_lat;
     				dedt = (erry - erry_last)/dt;
 					setpoint.velocity.y = lat_kp * erry + lat_kd * dedt;
 					setpoint.velocity.y = clip(setpoint.velocity.y, speed_limit);
@@ -262,16 +265,16 @@ static void stabilizerTask(void* param)
         			latObstPrsnt = false;
         		}
 
-        		if (rangeFront < threshold) {
-        			errx = -((float)threshold - rangeFront)/(float)threshold;
+        		if (rangeFront < threshold_lon) {
+        			errx = -((float)threshold_lon - rangeFront)/(float)threshold_lon;
         			dedt = (errx - errx_last)/dt;
         			setpoint.velocity.x = lon_kp * errx + lon_kd * dedt;
         			setpoint.velocity.x = clip(setpoint.velocity.x, speed_limit);
         			errx_last = errx;
         			lonObstPrsnt = true;
         			}
-        		else if (rangeBack < threshold) {
-        			errx = ((float)threshold - rangeBack)/(float)threshold;
+        		else if (rangeBack < threshold_lon) {
+        			errx = ((float)threshold_lon - rangeBack)/(float)threshold_lon;
         			dedt = (errx - errx_last)/dt;
         			setpoint.velocity.x = lon_kp * errx + lon_kd * dedt;
         			setpoint.velocity.x = clip(setpoint.velocity.x, speed_limit);
@@ -281,10 +284,23 @@ static void stabilizerTask(void* param)
         		else if (lonObstPrsnt) {
         			setpoint.velocity.x = 0.0f;
         			errx_last = 0.0;
-        			lonObstPrsnt = false;
+        			if (rangeFront-threshold_lon>=100) {
+        				lonObstPrsnt = false;}
         		}
         		else if (!lonObstPrsnt) {
-        		        setpoint.velocity.x = vx;
+        			errvx = ((float)vx - state.velocity.x)/(float)vx;
+//        			if (fabs(errvx)>=1.0f){
+//        				vx_kp = -1.0f;
+//        				errvx = vx;
+////        				vx = 0.0f;
+//        			}
+//        			else {
+//        				vx_kp = 0.0f;
+//        			}
+//					setpoint.velocity.x = vx_kp*errvx;
+//					setpoint.velocity.x = clip(setpoint.velocity.x, vx);
+
+					setpoint.velocity.x = vx + vx_kp*errvx;
         		}
 
             }
@@ -439,8 +455,10 @@ PARAM_ADD(PARAM_FLOAT, lon_kd, &lon_kd)
 PARAM_ADD(PARAM_FLOAT, lat_kp, &lat_kp)
 PARAM_ADD(PARAM_FLOAT, lat_kd, &lat_kd)
 PARAM_ADD(PARAM_FLOAT, vx, &vx)
+PARAM_ADD(PARAM_FLOAT, vx_kp, &vx_kp)
 //PARAM_ADD(PARAM_FLOAT, z, &z)
 //PARAM_ADD(PARAM_FLOAT, ki, &ki)
-PARAM_ADD(PARAM_UINT16, threshold, &threshold)
+PARAM_ADD(PARAM_UINT16, threshold_lon, &threshold_lon)
+PARAM_ADD(PARAM_UINT16, threshold_lat, &threshold_lat)
 PARAM_GROUP_STOP(oa)
 // My stuff ends
